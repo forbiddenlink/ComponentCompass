@@ -11,13 +11,13 @@
     "seed": "tsx scripts/upload-seed-data.ts"
   },
   "dependencies": {
+    "@ai-sdk/react": "^3.0.72",
+    "ai": "^6.0.70",
     "algoliasearch": "^5.46.2",
     "clsx": "^2.1.1",
-    "lucide-react": "^0.562.0",
     "prism-react-renderer": "^2.4.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "react-instantsearch": "^7.22.1",
     "react-markdown": "^10.1.0",
     "tailwind-merge": "^3.4.0"
   },

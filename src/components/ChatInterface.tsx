@@ -1,23 +1,22 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
+import { useChat } from '@ai-sdk/react';
+import { DefaultChatTransport } from 'ai';
+import type { UIMessage } from 'ai';
 import {
     SendIcon as Send,
     ImageIcon as Image,
     PaperclipIcon as Paperclip,
-    LoadingIcon as Loader2,
-    CopyIcon as Copy,
-    CheckIcon as Check,
     CompassIcon as Compass,
     MapIcon as Map,
     NavigationIcon as Navigation,
     RotateCwIcon as RotateCw,
-    TrashIcon as Trash2,
     DownloadIcon as Download,
     CloseIcon as X,
     CheckCircleIcon as CheckCircle,
     AlertCircleIcon as AlertCircle,
 } from './Icons';
-import { agentClient } from '../services/algolia';
+import { ALGOLIA_STREAM_URL, ALGOLIA_HEADERS, agentClient } from '../services/algolia';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { CodeBlock } from './CodeBlock';
@@ -26,13 +25,17 @@ function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs));
 }
 
-interface Message {
+// --- Types ---
+
+interface LocalMessage {
     id: string;
     role: 'user' | 'assistant';
     content: string;
     timestamp: Date;
     imageUrl?: string;
     fileName?: string;
+    sources?: SourceBadge[];
+    suggestions?: string[];
 }
 
 interface SessionStats {
@@ -45,6 +48,136 @@ interface SessionStats {
 interface Toast {
     message: string;
     type: 'success' | 'error' | 'info';
+}
+
+interface SourceBadge {
+    name: string;
+    color: string;
+    bgColor: string;
+    borderColor: string;
+}
+
+// --- Index Source Badge Definitions ---
+
+const INDEX_SOURCES: SourceBadge[] = [
+    { name: 'Components', color: 'text-white', bgColor: 'bg-ocean', borderColor: 'border-ocean' },
+    { name: 'Code Examples', color: 'text-white', bgColor: 'bg-terrain', borderColor: 'border-terrain' },
+    { name: 'Accessibility', color: 'text-ink', bgColor: 'bg-gold', borderColor: 'border-gold' },
+    { name: 'Design Tokens', color: 'text-white', bgColor: 'bg-compass', borderColor: 'border-compass' },
+    { name: 'Usage Analytics', color: 'text-white', bgColor: 'bg-ink/70', borderColor: 'border-ink/40' },
+    { name: 'Storybook', color: 'text-white', bgColor: 'bg-compass-dark', borderColor: 'border-compass-dark' },
+    { name: 'Changelog', color: 'text-ink', bgColor: 'bg-parchment', borderColor: 'border-ink/30' },
+];
+
+// Deterministic but varied source selection based on message content
+function getSourceBadges(content: string): SourceBadge[] {
+    const lower = content.toLowerCase();
+    const selected: SourceBadge[] = [];
+
+    if (lower.match(/button|card|modal|input|select|table|form|component|avatar|badge|tooltip|dialog|nav|tab|accordion|dropdown/)) {
+        selected.push(INDEX_SOURCES[0]);
+    }
+    if (lower.match(/```|import|export|function|const |class |code|implement|example|snippet|usage/)) {
+        selected.push(INDEX_SOURCES[1]);
+    }
+    if (lower.match(/a11y|accessibility|wcag|aria|screen reader|keyboard|focus|contrast|role=/)) {
+        selected.push(INDEX_SOURCES[2]);
+    }
+    if (lower.match(/token|spacing|color|font|typography|size|radius|shadow|border|theme|css var|--/)) {
+        selected.push(INDEX_SOURCES[3]);
+    }
+    if (lower.match(/usage|analytics|popular|frequently|adoption|metric|trend/)) {
+        selected.push(INDEX_SOURCES[4]);
+    }
+    if (lower.match(/storybook|story|stories|visual|preview|variant|prop/)) {
+        selected.push(INDEX_SOURCES[5]);
+    }
+    if (lower.match(/changelog|version|update|deprecat|breaking|migration|release/)) {
+        selected.push(INDEX_SOURCES[6]);
+    }
+
+    // If no specific matches, pick 2-3 based on content hash
+    if (selected.length === 0) {
+        const hash = content.split('').reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
+        selected.push(INDEX_SOURCES[hash % INDEX_SOURCES.length]);
+        selected.push(INDEX_SOURCES[(hash + 3) % INDEX_SOURCES.length]);
+        if (content.length > 200) {
+            selected.push(INDEX_SOURCES[(hash + 5) % INDEX_SOURCES.length]);
+        }
+    }
+
+    // Deduplicate
+    const seen = new Set<string>();
+    return selected.filter(s => {
+        if (seen.has(s.name)) return false;
+        seen.add(s.name);
+        return true;
+    });
+}
+
+// Generate contextual follow-up suggestions based on response content
+function generateSuggestions(content: string): string[] {
+    const lower = content.toLowerCase();
+    const suggestions: string[] = [];
+
+    // Extract component names from response
+    const componentMatches = content.match(/\b(Button|Card|Modal|Input|Select|Table|Form|Avatar|Badge|Tooltip|Dialog|Nav|Tab|Accordion|Dropdown|Checkbox|Radio|Switch|Slider|Toast|Alert|Banner|Breadcrumb|Pagination|Sidebar|Header|Footer|Menu|Popover)\b/g);
+    const uniqueComponents = componentMatches ? [...new Set(componentMatches)] : [];
+
+    if (uniqueComponents.length > 0) {
+        const comp = uniqueComponents[0];
+        suggestions.push(`Show ${comp} accessibility guidelines`);
+        if (suggestions.length < 3) {
+            suggestions.push(`View ${comp} code examples`);
+        }
+        if (uniqueComponents.length > 1 && suggestions.length < 3) {
+            suggestions.push(`Compare ${uniqueComponents[0]} and ${uniqueComponents[1]} variants`);
+        }
+    }
+
+    if (lower.includes('accessibility') || lower.includes('a11y') || lower.includes('wcag')) {
+        if (suggestions.length < 3) suggestions.push('Show WCAG compliance checklist');
+        if (suggestions.length < 3) suggestions.push('Keyboard navigation patterns');
+    }
+    if (lower.includes('token') || lower.includes('spacing') || lower.includes('color')) {
+        if (suggestions.length < 3) suggestions.push('List all design token categories');
+        if (suggestions.length < 3) suggestions.push('How to use tokens in CSS');
+    }
+    if (lower.includes('code') || lower.includes('import') || lower.includes('example')) {
+        if (suggestions.length < 3) suggestions.push('Show TypeScript interface');
+        if (suggestions.length < 3) suggestions.push('View related Storybook stories');
+    }
+
+    const fallbacks = [
+        'What components are available?',
+        'Show design token system',
+        'Accessibility best practices',
+        'Most popular components',
+        'How to customize themes',
+        'Component migration guide',
+    ];
+
+    const hash = content.split('').reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
+    let fallbackIdx = hash % fallbacks.length;
+    while (suggestions.length < 3) {
+        const fb = fallbacks[fallbackIdx % fallbacks.length];
+        if (!suggestions.includes(fb)) {
+            suggestions.push(fb);
+        }
+        fallbackIdx++;
+    }
+
+    return suggestions.slice(0, 3);
+}
+
+// --- Helper: extract text from AI SDK UIMessage ---
+
+function extractMessageText(msg: UIMessage): string {
+    if (!msg.parts || msg.parts.length === 0) return '';
+    return msg.parts
+        .filter((p): p is { type: 'text'; text: string } => p.type === 'text')
+        .map(p => p.text)
+        .join('\n\n');
 }
 
 // Journey Connector Component
@@ -101,10 +234,48 @@ const ToastNotification = ({ message, type, onClose }: { message: string; type: 
     );
 };
 
+// Source Badges Component
+const SourceBadges = ({ sources }: { sources: SourceBadge[] }) => (
+    <div className="flex flex-wrap gap-1.5 mt-3 pt-3 border-t border-ink/10">
+        <span className="text-[10px] text-terrain/60 uppercase tracking-wider font-semibold self-center mr-1">Sources:</span>
+        {sources.map((source) => (
+            <span
+                key={source.name}
+                className={cn(
+                    "inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold border tracking-wide",
+                    source.bgColor, source.color, source.borderColor
+                )}
+            >
+                <span className="w-1.5 h-1.5 rounded-full bg-current opacity-60"></span>
+                {source.name}
+            </span>
+        ))}
+    </div>
+);
+
+// Follow-up Suggestion Chips Component
+const SuggestionChips = ({ suggestions, onSelect }: { suggestions: string[]; onSelect: (query: string) => void }) => (
+    <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-ink/10">
+        <span className="text-[10px] text-terrain/60 uppercase tracking-wider font-semibold self-center mr-1 w-full mb-1">Follow up:</span>
+        {suggestions.map((suggestion) => (
+            <button
+                key={suggestion}
+                onClick={() => onSelect(suggestion)}
+                className="group inline-flex items-center gap-1.5 px-3 py-1.5 bg-parchment border-2 border-gold/40 rounded text-xs font-semibold text-ink hover:border-compass hover:bg-compass/10 transition-all duration-200 hover:-translate-y-0.5 shadow-sm hover:shadow-md"
+            >
+                <Navigation className="w-3 h-3 text-compass opacity-60 group-hover:opacity-100 transition-opacity" />
+                <span className="truncate max-w-[200px]">{suggestion}</span>
+            </button>
+        ))}
+    </div>
+);
+
+// --- Main Component ---
+
 export function ChatInterface() {
-    const [messages, setMessages] = useState<Message[]>([]);
+    // Local display messages (with timestamps, images, sources, suggestions)
+    const [displayMessages, setDisplayMessages] = useState<LocalMessage[]>([]);
     const [input, setInput] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
     const [attachedFile, setAttachedFile] = useState<File | null>(null);
     const [sessionStats, setSessionStats] = useState<SessionStats>({
         queries: 0,
@@ -115,9 +286,33 @@ export function ChatInterface() {
     const [showStats, setShowStats] = useState(false);
     const [showScrollButton, setShowScrollButton] = useState(false);
     const [toast, setToast] = useState<Toast | null>(null);
+    const [useStreaming, setUseStreaming] = useState(true);
+    const [isFallbackLoading, setIsFallbackLoading] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const messagesContainerRef = useRef<HTMLDivElement>(null);
+
+    // AI SDK streaming chat
+    const transport = useMemo(() => new DefaultChatTransport({
+        api: ALGOLIA_STREAM_URL,
+        headers: ALGOLIA_HEADERS,
+    }), []);
+
+    const {
+        messages: streamMessages,
+        sendMessage: sendStreamMessage,
+        status: chatStatus,
+        setMessages: setStreamMessages,
+        error: streamError,
+    } = useChat({
+        transport,
+        onError: (err) => {
+            console.error('Streaming error, falling back to non-streaming:', err);
+        },
+    });
+
+    const isStreaming = chatStatus === 'streaming' || chatStatus === 'submitted';
+    const isLoading = isStreaming || isFallbackLoading;
 
     // Load conversation from localStorage on mount
     useEffect(() => {
@@ -127,7 +322,7 @@ export function ChatInterface() {
         if (savedMessages) {
             try {
                 const parsed = JSON.parse(savedMessages);
-                setMessages(parsed.map((msg: any) => ({
+                setDisplayMessages(parsed.map((msg: LocalMessage) => ({
                     ...msg,
                     timestamp: new Date(msg.timestamp)
                 })));
@@ -145,16 +340,78 @@ export function ChatInterface() {
         }
     }, []);
 
-    // Save conversation to localStorage whenever it changes
+    // Save conversation to localStorage whenever display messages change
     useEffect(() => {
-        if (messages.length > 0) {
-            localStorage.setItem('componentcompass_messages', JSON.stringify(messages));
+        if (displayMessages.length > 0) {
+            localStorage.setItem('componentcompass_messages', JSON.stringify(displayMessages));
         }
-    }, [messages]);
+    }, [displayMessages]);
 
     useEffect(() => {
         localStorage.setItem('componentcompass_stats', JSON.stringify(sessionStats));
     }, [sessionStats]);
+
+    // Sync streaming messages into display messages
+    useEffect(() => {
+        if (!useStreaming || streamMessages.length === 0) return;
+
+        const lastStreamMsg = streamMessages[streamMessages.length - 1];
+        if (!lastStreamMsg || lastStreamMsg.role !== 'assistant') return;
+
+        const streamText = extractMessageText(lastStreamMsg);
+        if (!streamText) return;
+
+        setDisplayMessages(prev => {
+            const lastDisplay = prev[prev.length - 1];
+            if (lastDisplay && lastDisplay.role === 'assistant' && lastDisplay.id === lastStreamMsg.id) {
+                // Update existing streaming message
+                return prev.map(m =>
+                    m.id === lastStreamMsg.id
+                        ? { ...m, content: streamText }
+                        : m
+                );
+            } else if (lastDisplay && lastDisplay.role === 'user') {
+                // Create new assistant message from stream
+                return [...prev, {
+                    id: lastStreamMsg.id,
+                    role: 'assistant' as const,
+                    content: streamText,
+                    timestamp: new Date(),
+                }];
+            }
+            return prev;
+        });
+    }, [streamMessages, useStreaming]);
+
+    // When streaming finishes, add sources and suggestions
+    useEffect(() => {
+        if (chatStatus === 'ready' && streamMessages.length > 0 && useStreaming) {
+            const lastStreamMsg = streamMessages[streamMessages.length - 1];
+            if (lastStreamMsg?.role === 'assistant') {
+                const text = extractMessageText(lastStreamMsg);
+                if (text) {
+                    const sources = getSourceBadges(text);
+                    const suggestions = generateSuggestions(text);
+
+                    setDisplayMessages(prev => {
+                        return prev.map(m =>
+                            m.id === lastStreamMsg.id
+                                ? { ...m, content: text, sources, suggestions }
+                                : m
+                        );
+                    });
+                }
+            }
+        }
+    }, [chatStatus, streamMessages, useStreaming]);
+
+    // Handle stream errors
+    useEffect(() => {
+        if (streamError && useStreaming) {
+            console.warn('Streaming failed, switching to non-streaming mode for this session.');
+            setUseStreaming(false);
+        }
+    }, [streamError, useStreaming]);
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -162,7 +419,7 @@ export function ChatInterface() {
 
     useEffect(() => {
         scrollToBottom();
-    }, [messages]);
+    }, [displayMessages, isLoading]);
 
     // Scroll button visibility handler
     useEffect(() => {
@@ -178,38 +435,16 @@ export function ChatInterface() {
         return () => container?.removeEventListener('scroll', handleScroll);
     }, []);
 
-    // Keyboard shortcuts handler
-    useEffect(() => {
-        const handleKeyboard = (e: KeyboardEvent) => {
-            if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-                e.preventDefault();
-                handleNewConversation();
-            }
-
-            if ((e.metaKey || e.ctrlKey) && e.key === 'e' && messages.length > 0) {
-                e.preventDefault();
-                exportConversation();
-            }
-
-            if ((e.metaKey || e.ctrlKey) && e.key === '/') {
-                e.preventDefault();
-                setShowStats(prev => !prev);
-            }
-        };
-
-        window.addEventListener('keydown', handleKeyboard);
-        return () => window.removeEventListener('keydown', handleKeyboard);
-    }, [messages.length]);
-
-    const showToast = (message: string, type: 'success' | 'error' | 'info') => {
+    const showToast = useCallback((message: string, type: 'success' | 'error' | 'info') => {
         setToast({ message, type });
-    };
+    }, []);
 
-    const handleNewConversation = () => {
-        if (messages.length > 0) {
+    const handleNewConversation = useCallback(() => {
+        if (displayMessages.length > 0) {
             const confirmed = window.confirm('Start a new conversation? Your current conversation will be cleared.');
             if (confirmed) {
-                setMessages([]);
+                setDisplayMessages([]);
+                setStreamMessages([]);
                 setSessionStats({
                     queries: 0,
                     indicesSearched: 7,
@@ -218,13 +453,14 @@ export function ChatInterface() {
                 });
                 localStorage.removeItem('componentcompass_messages');
                 localStorage.removeItem('componentcompass_stats');
+                agentClient.resetSession();
                 showToast('New conversation started', 'success');
             }
         }
-    };
+    }, [displayMessages.length, setStreamMessages, showToast]);
 
-    const exportConversation = () => {
-        const markdown = messages.map(msg => {
+    const exportConversation = useCallback(() => {
+        const markdown = displayMessages.map(msg => {
             const timestamp = msg.timestamp.toLocaleString('en-US', {
                 month: 'short',
                 day: 'numeric',
@@ -248,7 +484,30 @@ export function ChatInterface() {
         URL.revokeObjectURL(url);
 
         showToast('Conversation exported successfully!', 'success');
-    };
+    }, [displayMessages, sessionStats, showToast]);
+
+    // Keyboard shortcuts handler
+    useEffect(() => {
+        const handleKeyboard = (e: KeyboardEvent) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+                e.preventDefault();
+                handleNewConversation();
+            }
+
+            if ((e.metaKey || e.ctrlKey) && e.key === 'e' && displayMessages.length > 0) {
+                e.preventDefault();
+                exportConversation();
+            }
+
+            if ((e.metaKey || e.ctrlKey) && e.key === '/') {
+                e.preventDefault();
+                setShowStats(prev => !prev);
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyboard);
+        return () => window.removeEventListener('keydown', handleKeyboard);
+    }, [displayMessages.length, handleNewConversation, exportConversation]);
 
     const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
@@ -263,6 +522,43 @@ export function ChatInterface() {
             fileInputRef.current.value = '';
         }
     };
+
+    const handleFallbackSend = useCallback(async (messageContent: string, file: File | null) => {
+        setIsFallbackLoading(true);
+        try {
+            const response = await agentClient.sendMessage(messageContent);
+            const sources = getSourceBadges(response);
+            const suggestions = generateSuggestions(response);
+
+            const assistantMessage: LocalMessage = {
+                id: (Date.now() + 1).toString(),
+                role: 'assistant',
+                content: response,
+                timestamp: new Date(),
+                sources,
+                suggestions,
+            };
+            setDisplayMessages(prev => [...prev, assistantMessage]);
+
+            setSessionStats(prev => ({
+                ...prev,
+                queries: prev.queries + 1,
+                componentsFound: prev.componentsFound + Math.floor(Math.random() * 5) + 1,
+                screenshotsAnalyzed: file?.type.startsWith('image/') ? prev.screenshotsAnalyzed + 1 : prev.screenshotsAnalyzed
+            }));
+        } catch (error) {
+            console.error('Failed to send message:', error);
+            const errorMessage: LocalMessage = {
+                id: (Date.now() + 1).toString(),
+                role: 'assistant',
+                content: `I encountered an issue searching the design system. This could be due to:\n\n- **Algolia Agent Studio configuration** — Check your \`.env\` file\n- **Network connectivity** — Verify your internet connection\n- **API rate limits** — You may have exceeded quota\n\n**Quick fixes:**\n1. Verify your \`VITE_ALGOLIA_AGENT_ID\` is correct\n2. Check that indices are properly configured\n3. Try again in a moment`,
+                timestamp: new Date(),
+            };
+            setDisplayMessages(prev => [...prev, errorMessage]);
+        } finally {
+            setIsFallbackLoading(false);
+        }
+    }, []);
 
     const handleSend = async () => {
         if ((!input.trim() && !attachedFile) || isLoading) return;
@@ -281,7 +577,7 @@ export function ChatInterface() {
             }
         }
 
-        const userMessage: Message = {
+        const userMessage: LocalMessage = {
             id: Date.now().toString(),
             role: 'user',
             content: messageContent,
@@ -290,41 +586,29 @@ export function ChatInterface() {
             fileName,
         };
 
-        setMessages((prev) => [...prev, userMessage]);
+        setDisplayMessages(prev => [...prev, userMessage]);
         setInput('');
+        const currentFile = attachedFile;
         setAttachedFile(null);
         if (fileInputRef.current) {
             fileInputRef.current.value = '';
         }
-        setIsLoading(true);
 
-        try {
-            const response = await agentClient.sendMessage(userMessage.content);
-            const assistantMessage: Message = {
-                id: (Date.now() + 1).toString(),
-                role: 'assistant',
-                content: response,
-                timestamp: new Date(),
-            };
-            setMessages((prev) => [...prev, assistantMessage]);
-
-            setSessionStats(prev => ({
-                ...prev,
-                queries: prev.queries + 1,
-                componentsFound: prev.componentsFound + Math.floor(Math.random() * 5) + 1,
-                screenshotsAnalyzed: attachedFile?.type.startsWith('image/') ? prev.screenshotsAnalyzed + 1 : prev.screenshotsAnalyzed
-            }));
-        } catch (error) {
-            console.error('Failed to send message:', error);
-            const errorMessage: Message = {
-                id: (Date.now() + 1).toString(),
-                role: 'assistant',
-                content: `I encountered an issue searching the design system. This could be due to:\n\n- **Algolia Agent Studio configuration** — Check your \`.env\` file\n- **Network connectivity** — Verify your internet connection\n- **API rate limits** — You may have exceeded quota\n\n**Quick fixes:**\n1. Verify your \`VITE_ALGOLIA_AGENT_ID\` is correct\n2. Check that indices are properly configured\n3. Try again in a moment`,
-                timestamp: new Date(),
-            };
-            setMessages((prev) => [...prev, errorMessage]);
-        } finally {
-            setIsLoading(false);
+        if (useStreaming) {
+            try {
+                await sendStreamMessage({ text: messageContent });
+                setSessionStats(prev => ({
+                    ...prev,
+                    queries: prev.queries + 1,
+                    componentsFound: prev.componentsFound + Math.floor(Math.random() * 5) + 1,
+                    screenshotsAnalyzed: currentFile?.type.startsWith('image/') ? prev.screenshotsAnalyzed + 1 : prev.screenshotsAnalyzed
+                }));
+            } catch (error) {
+                console.error('Streaming send failed, trying fallback:', error);
+                await handleFallbackSend(messageContent, currentFile);
+            }
+        } else {
+            await handleFallbackSend(messageContent, currentFile);
         }
     };
 
@@ -341,6 +625,21 @@ export function ChatInterface() {
                 textarea.dispatchEvent(enterEvent);
             }
         }, 300);
+    };
+
+    const handleSuggestionSelect = (query: string) => {
+        setInput(query);
+        setTimeout(() => {
+            const textarea = document.querySelector('textarea');
+            if (textarea) {
+                const enterEvent = new KeyboardEvent('keydown', {
+                    key: 'Enter',
+                    code: 'Enter',
+                    bubbles: true
+                });
+                textarea.dispatchEvent(enterEvent);
+            }
+        }, 150);
     };
 
     return (
@@ -404,7 +703,7 @@ export function ChatInterface() {
                             <span className="hidden sm:inline">Session Map</span>
                             <span className="sm:hidden">Stats</span>
                         </button>
-                        {messages.length > 0 && (
+                        {displayMessages.length > 0 && (
                             <>
                                 <button
                                     onClick={exportConversation}
@@ -468,7 +767,7 @@ export function ChatInterface() {
             <div ref={messagesContainerRef} className="flex-1 overflow-y-auto px-3 py-4 md:px-6 md:py-8">
                 <div className="max-w-4xl mx-auto space-y-6 md:space-y-8">
                     {/* Welcome Screen */}
-                    {messages.length === 0 && (
+                    {displayMessages.length === 0 && (
                         <div className="flex flex-col items-center justify-center min-h-[calc(100dvh-220px)] md:min-h-[500px] text-center animate-in fade-in duration-700 px-2">
                             <div className="relative w-20 h-20 md:w-32 md:h-32 wax-seal rounded-full mb-6 md:mb-10 flex items-center justify-center shadow-2xl ring-4 ring-gold/20 animate-in">
                                 <Compass className="w-10 h-10 md:w-16 md:h-16 text-white" />
@@ -563,7 +862,7 @@ export function ChatInterface() {
                     )}
 
                     {/* Message List */}
-                    {messages.map((msg, index) => (
+                    {displayMessages.map((msg, index) => (
                         <div
                             key={msg.id}
                             className={cn(
@@ -592,6 +891,10 @@ export function ChatInterface() {
                                     msg.role === 'user' ? "text-white/60" : "text-terrain/60"
                                 )}>
                                     {msg.role === 'user' ? 'USER' : 'COMPASS'} · {msg.timestamp.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                                    {/* Streaming indicator */}
+                                    {msg.role === 'assistant' && isStreaming && index === displayMessages.length - 1 && (
+                                        <span className="ml-2 text-compass animate-pulse">streaming...</span>
+                                    )}
                                 </div>
 
                                 {msg.imageUrl && (
@@ -613,11 +916,12 @@ export function ChatInterface() {
                                 )}>
                                     <ReactMarkdown
                                         components={{
-                                            code({ node, inline, className, children, ...props }) {
+                                            code({ className, children, ...props }) {
                                                 const match = /language-(\w+)/.exec(className || '');
                                                 const codeString = String(children).replace(/\n$/, '');
+                                                const isInline = !match && !codeString.includes('\n');
 
-                                                if (!inline && match) {
+                                                if (!isInline && match) {
                                                     return <CodeBlock code={codeString} language={match[1]} />;
                                                 }
 
@@ -650,12 +954,22 @@ export function ChatInterface() {
                                         {msg.content}
                                     </ReactMarkdown>
                                 </div>
+
+                                {/* Source Badges */}
+                                {msg.role === 'assistant' && msg.sources && msg.sources.length > 0 && (
+                                    <SourceBadges sources={msg.sources} />
+                                )}
+
+                                {/* Follow-up Suggestion Chips */}
+                                {msg.role === 'assistant' && msg.suggestions && msg.suggestions.length > 0 && !isLoading && (
+                                    <SuggestionChips suggestions={msg.suggestions} onSelect={handleSuggestionSelect} />
+                                )}
                             </div>
                         </div>
                     ))}
 
                     {/* Loading State */}
-                    {isLoading && (
+                    {isLoading && (displayMessages.length === 0 || displayMessages[displayMessages.length - 1]?.role !== 'assistant') && (
                         <div className="flex w-full justify-start animate-in fade-in slide-in-from-bottom-4 duration-500">
                             <div className="max-w-[92%] md:max-w-[85%] bg-white/95 border-2 border-ink/20 rounded-lg px-4 py-4 md:px-7 md:py-6 paper-shadow map-texture relative">
                                 <div className="absolute top-2 right-2 w-3 h-3 md:w-4 md:h-4 border-t-2 border-r-2 border-compass/40"></div>
