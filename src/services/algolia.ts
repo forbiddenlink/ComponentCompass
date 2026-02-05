@@ -49,7 +49,7 @@ export class AgentStudioClient {
     constructor(appId: string, apiKey: string, agentId: string) {
         this.appId = appId;
         this.apiKey = apiKey;
-        this.endpoint = `https://${appId}.algolia.net/agent-studio/1/agents/${agentId}/completions`;
+        this.endpoint = `https://${appId}.algolia.net/agent-studio/1/agents/${agentId}/completions?compatibilityMode=ai-sdk-5`;
     }
 
     async sendMessage(

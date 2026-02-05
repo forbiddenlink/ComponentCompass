@@ -74,47 +74,33 @@ export const MapIcon = ({ className = "w-5 h-5" }: IconProps) => (
 /** Quill pen dipped in ink - for send/submit actions */
 export const SendIcon = ({ className = "w-5 h-5" }: IconProps) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-    {/* Quill feather body */}
-    <path d="M20 2C17 4 14 8 11 12L9 14L7 18L9.5 15.5L12 14C16 11 19 7 21 3L20 2Z" fill="currentColor" opacity="0.15" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
-    {/* Quill nib */}
-    <path d="M9 14L7 18L5 22L9.5 15.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-    {/* Ink trail */}
-    <path d="M5 22C5.5 21 6 20.5 7 20" stroke="currentColor" strokeWidth="1" strokeLinecap="round" />
-    {/* Feather barbs */}
-    <path d="M18 3L15 7" stroke="currentColor" strokeWidth="0.75" strokeLinecap="round" />
-    <path d="M16 5L13 9" stroke="currentColor" strokeWidth="0.75" strokeLinecap="round" />
-    <path d="M14 7L11.5 10.5" stroke="currentColor" strokeWidth="0.75" strokeLinecap="round" />
+    {/* Compass arrow / directional send */}
+    <path d="M3 12L21 3L12 21L10 14L3 12Z" fill="currentColor" opacity="0.15" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+    <path d="M10 14L21 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
   </svg>
 );
 
-/** Scroll / message in a bottle - for image/upload with vintage feel */
+/** Image / landscape icon for screenshot upload */
 export const ImageIcon = ({ className = "w-5 h-5" }: IconProps) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-    {/* Spyglass / telescope body */}
-    <path d="M21 3L14 10" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
-    {/* Lens end (wider) */}
-    <ellipse cx="22" cy="2" rx="1.5" ry="1" transform="rotate(45 22 2)" stroke="currentColor" strokeWidth="1.5" />
-    {/* Telescope tube sections */}
-    <path d="M14 10L10 14" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
-    <path d="M10 14L7 17" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" />
-    {/* Eyepiece */}
-    <circle cx="5.5" cy="18.5" r="2.5" stroke="currentColor" strokeWidth="1.5" />
-    <circle cx="5.5" cy="18.5" r="1" stroke="currentColor" strokeWidth="0.75" />
+    {/* Frame */}
+    <rect x="3" y="4" width="18" height="16" rx="2" stroke="currentColor" strokeWidth="1.5" />
+    {/* Mountain landscape */}
+    <path d="M3 17L8 12L12 16L16 11L21 17" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+    {/* Sun */}
+    <circle cx="8" cy="9" r="2" fill="currentColor" opacity="0.3" stroke="currentColor" strokeWidth="1" />
   </svg>
 );
 
-/** Spyglass / telescope for image upload */
+/** Image upload with arrow indicator */
 export const ImageUploadIcon = ({ className = "w-5 h-5" }: IconProps) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-    {/* Telescope body */}
-    <path d="M21 3L14 10" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
-    <ellipse cx="22" cy="2" rx="1.5" ry="1" transform="rotate(45 22 2)" stroke="currentColor" strokeWidth="1.5" />
-    <path d="M14 10L10 14" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
-    <path d="M10 14L7 17" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" />
-    <circle cx="5.5" cy="18.5" r="2.5" stroke="currentColor" strokeWidth="1.5" />
-    <circle cx="5.5" cy="18.5" r="1" stroke="currentColor" strokeWidth="0.75" />
-    {/* Upload arrow indicator */}
-    <path d="M18 14V20M18 14L16 16M18 14L20 16" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    {/* Frame */}
+    <rect x="3" y="4" width="18" height="16" rx="2" stroke="currentColor" strokeWidth="1.5" />
+    {/* Mountain landscape */}
+    <path d="M3 17L8 12L12 16L16 11L21 17" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+    {/* Upload arrow */}
+    <path d="M12 6V12M12 6L9 9M12 6L15 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 );
 

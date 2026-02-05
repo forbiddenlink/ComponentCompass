@@ -724,8 +724,8 @@ export function ChatInterface() {
                                 </button>
                             </>
                         )}
-                        <span className="hidden lg:inline-flex px-4 py-2 bg-gold-muted text-ink text-xs rounded font-bold border-2 border-gold shadow-sm whitespace-nowrap">
-                            Algolia Agent Studio
+                        <span className="hidden lg:inline-flex px-4 py-2 text-terrain/60 text-[10px] tracking-wider uppercase font-semibold whitespace-nowrap">
+                            by Elizabeth Stein
                         </span>
                     </div>
                 </div>
@@ -1090,18 +1090,15 @@ export function ChatInterface() {
                         </button>
                     </div>
 
-                    <div className="mt-2 md:mt-3 text-center text-[10px] md:text-xs text-terrain flex items-center justify-center gap-2 md:gap-3 flex-wrap px-2 md:px-4">
-                        <span className="flex items-center gap-1">
-                            <span className="font-bold text-compass">*</span>
-                            <span className="font-semibold">Algolia Agent Studio</span>
-                        </span>
-                        <span className="hidden sm:inline text-ink/40">·</span>
+                    <div className="mt-2 md:mt-3 text-center text-[10px] md:text-xs text-terrain/60 flex items-center justify-center gap-2 md:gap-3 flex-wrap px-2 md:px-4">
+                        <span className="font-semibold">Powered by Algolia</span>
+                        <span className="hidden sm:inline text-ink/30">·</span>
                         <span className="hidden sm:inline"><kbd className="px-1.5 md:px-2 py-0.5 bg-ink/10 rounded text-[9px] md:text-[10px] font-mono">Enter</kbd> send</span>
-                        <span className="hidden md:inline text-ink/40">·</span>
+                        <span className="hidden md:inline text-ink/30">·</span>
                         <span className="hidden md:inline"><kbd className="px-2 py-0.5 bg-ink/10 rounded text-[10px] font-mono">Shift+Enter</kbd> new line</span>
-                        <span className="hidden lg:inline text-ink/40">·</span>
+                        <span className="hidden lg:inline text-ink/30">·</span>
                         <span className="hidden lg:inline"><kbd className="px-2 py-0.5 bg-ink/10 rounded text-[10px] font-mono">Cmd+K</kbd> new</span>
-                        <span className="hidden lg:inline text-ink/40">·</span>
+                        <span className="hidden lg:inline text-ink/30">·</span>
                         <span className="hidden lg:inline"><kbd className="px-2 py-0.5 bg-ink/10 rounded text-[10px] font-mono">Cmd+E</kbd> export</span>
                     </div>
                 </div>
