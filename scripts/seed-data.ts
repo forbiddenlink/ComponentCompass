@@ -3,7 +3,7 @@ import fs from 'fs';
 import path from 'path';
 
 // Helper to write JSON files
-const writeData = (filename: string, data: any) => {
+const writeData = (filename: string, data: unknown) => {
     const dir = path.join(process.cwd(), 'data');
     if (!fs.existsSync(dir)) {
         fs.mkdirSync(dir);
