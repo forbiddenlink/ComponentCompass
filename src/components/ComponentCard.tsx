@@ -1,5 +1,8 @@
+import { useState } from 'react';
 import { cn } from '../lib/utils';
 import { trackComponentCardClick } from '../services/insights';
+import { QuickPreview, PREVIEWABLE_COMPONENTS } from './ComponentPreview';
+import { PlayIcon } from './Icons';
 import componentsData from '../../data/components_index_enhanced.json';
 
 interface ComponentInfo {
@@ -23,10 +26,12 @@ interface ComponentCardProps {
 }
 
 export function ComponentCard({ componentName, onAction }: ComponentCardProps) {
+  const [showPreview, setShowPreview] = useState(false);
   const data = componentLookup.get(componentName.toLowerCase());
   if (!data) return null;
 
   const variants = data.variants.split(',').map(v => v.trim()).filter(Boolean);
+  const hasPreview = PREVIEWABLE_COMPONENTS.includes(componentName.toLowerCase());
 
   const handleAction = (action: string) => {
     trackComponentCardClick(data.name);
@@ -54,6 +59,12 @@ export function ComponentCard({ componentName, onAction }: ComponentCardProps) {
           <span className={cn('text-caption px-1.5 py-0.5 rounded font-semibold', statusColor)}>
             {data.status}
           </span>
+          {hasPreview && (
+            <span className="flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 bg-terrain/15 text-terrain rounded">
+              <span className="w-1.5 h-1.5 rounded-full bg-terrain" />
+              Live Preview
+            </span>
+          )}
         </div>
         <span className="text-caption text-muted font-mono uppercase tracking-wider">{data.category}</span>
       </div>
@@ -74,7 +85,14 @@ export function ComponentCard({ componentName, onAction }: ComponentCardProps) {
         )}
       </div>
 
-      {/* Actions - simplified to 2 buttons */}
+      {/* Live Preview Section */}
+      {showPreview && hasPreview && (
+        <div className="border-t border-ink/8">
+          <QuickPreview componentName={componentName} />
+        </div>
+      )}
+
+      {/* Actions */}
       <div className="px-4 py-2.5 border-t border-ink/8 flex gap-2">
         <button
           type="button"
@@ -90,6 +108,21 @@ export function ComponentCard({ componentName, onAction }: ComponentCardProps) {
         >
           Examples
         </button>
+        {hasPreview && (
+          <button
+            type="button"
+            onClick={() => setShowPreview(!showPreview)}
+            className={cn(
+              "text-caption px-3 py-1.5 rounded transition-colors font-semibold focus-ring flex items-center gap-1.5",
+              showPreview
+                ? "bg-terrain text-white hover:bg-terrain-dark"
+                : "border border-terrain/30 text-terrain hover:bg-terrain/5"
+            )}
+          >
+            <PlayIcon className="w-3.5 h-3.5" />
+            {showPreview ? 'Hide Preview' : 'Try It'}
+          </button>
+        )}
       </div>
     </div>
   );
