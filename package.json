@@ -43,22 +43,14 @@
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
-<<<<<<< Updated upstream
-    "@types/node": "^25.5.0",
-=======
     "@trigger.dev/build": "^4.4.3",
-    "@types/node": "^24.10.7",
->>>>>>> Stashed changes
+    "@types/node": "^25.5.0",
     "@types/react": "^19.2.5",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.1",
     "@vitest/ui": "^4.0.18",
-<<<<<<< Updated upstream
     "autoprefixer": "^10.4.27",
-=======
-    "autoprefixer": "^10.4.23",
     "concurrently": "^9.2.1",
->>>>>>> Stashed changes
     "eslint": "^9.39.1",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
@@ -72,5 +64,12 @@
     "vitest": "^4.0.18"
   },
   "description": "AI-powered design system navigator for discovering UI components through natural conversation",
-  "license": "MIT"
+  "license": "MIT",
+  "pnpm": {
+    "overrides": {
+      "picomatch": ">=4.0.4",
+      "rollup": ">=4.59.0",
+      "vite": ">=6.4.2"
+    }
+  }
 }
