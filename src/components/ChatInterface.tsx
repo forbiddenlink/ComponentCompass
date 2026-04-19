@@ -1,8 +1,5 @@
-import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { useChat } from '@ai-sdk/react';
-import { DefaultChatTransport } from 'ai';
-import type { UIMessage } from 'ai';
 import {
     SendIcon as Send,
     ImageIcon as Image,
@@ -16,46 +13,25 @@ import {
     CheckCircleIcon as CheckCircle,
     AlertCircleIcon as AlertCircle,
 } from './Icons';
-import { ALGOLIA_STREAM_URL, ALGOLIA_HEADERS, agentClient } from '../services/algolia';
 import { cn } from '../lib/utils';
+import { createRateLimiter } from '../lib/rate-limit';
 import { CodeBlock } from './CodeBlock';
 import { FeedbackButtons } from './FeedbackButtons';
 import { ComponentCard, KNOWN_COMPONENTS } from './ComponentCard';
-import { trackMessageView, trackSuggestionClick } from '../services/insights';
+import { trackSuggestionClick } from '../services/insights';
+import { useMessages } from '../hooks/useMessages';
+import { useStreamingChat } from '../hooks/useStreaming';
+import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
+import type { SourceBadge } from '../hooks/useMessages';
 
 // --- Types ---
-
-interface LocalMessage {
-    id: string;
-    role: 'user' | 'assistant';
-    content: string;
-    timestamp: Date;
-    imageUrl?: string;
-    fileName?: string;
-    sources?: SourceBadge[];
-    suggestions?: string[];
-}
-
-interface SessionStats {
-    queries: number;
-    indicesSearched: number;
-    componentsFound: number;
-    screenshotsAnalyzed: number;
-}
 
 interface Toast {
     message: string;
     type: 'success' | 'error' | 'info';
 }
 
-interface SourceBadge {
-    name: string;
-    color: string;
-    bgColor: string;
-    borderColor: string;
-}
-
-// --- Index Source Badge Definitions ---
+// --- Index Source Names (type-safe) ---
 
 const INDEX_SOURCES: SourceBadge[] = [
     { name: 'Components', color: 'text-white', bgColor: 'bg-ocean', borderColor: 'border-ocean' },
@@ -67,116 +43,8 @@ const INDEX_SOURCES: SourceBadge[] = [
     { name: 'Changelog', color: 'text-ink', bgColor: 'bg-parchment', borderColor: 'border-ink/30' },
 ];
 
-// Deterministic but varied source selection based on message content
-function getSourceBadges(content: string): SourceBadge[] {
-    const lower = content.toLowerCase();
-    const selected: SourceBadge[] = [];
-
-    if (lower.match(/button|card|modal|input|select|table|form|component|avatar|badge|tooltip|dialog|nav|tab|accordion|dropdown/)) {
-        selected.push(INDEX_SOURCES[0]);
-    }
-    if (lower.match(/```|import|export|function|const |class |code|implement|example|snippet|usage/)) {
-        selected.push(INDEX_SOURCES[1]);
-    }
-    if (lower.match(/a11y|accessibility|wcag|aria|screen reader|keyboard|focus|contrast|role=/)) {
-        selected.push(INDEX_SOURCES[2]);
-    }
-    if (lower.match(/token|spacing|color|font|typography|size|radius|shadow|border|theme|css var|--/)) {
-        selected.push(INDEX_SOURCES[3]);
-    }
-    if (lower.match(/usage|analytics|popular|frequently|adoption|metric|trend/)) {
-        selected.push(INDEX_SOURCES[4]);
-    }
-    if (lower.match(/storybook|story|stories|visual|preview|variant|prop/)) {
-        selected.push(INDEX_SOURCES[5]);
-    }
-    if (lower.match(/changelog|version|update|deprecat|breaking|migration|release/)) {
-        selected.push(INDEX_SOURCES[6]);
-    }
-
-    // If no specific matches, pick 2-3 based on content hash
-    if (selected.length === 0) {
-        const hash = content.split('').reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
-        selected.push(INDEX_SOURCES[hash % INDEX_SOURCES.length]);
-        selected.push(INDEX_SOURCES[(hash + 3) % INDEX_SOURCES.length]);
-        if (content.length > 200) {
-            selected.push(INDEX_SOURCES[(hash + 5) % INDEX_SOURCES.length]);
-        }
-    }
-
-    // Deduplicate
-    const seen = new Set<string>();
-    return selected.filter(s => {
-        if (seen.has(s.name)) return false;
-        seen.add(s.name);
-        return true;
-    });
-}
-
-// Generate contextual follow-up suggestions based on response content
-function generateSuggestions(content: string): string[] {
-    const lower = content.toLowerCase();
-    const suggestions: string[] = [];
-
-    // Extract component names from response
-    const componentMatches = content.match(/\b(Button|Card|Modal|Input|Select|Table|Form|Avatar|Badge|Tooltip|Dialog|Nav|Tab|Accordion|Dropdown|Checkbox|Radio|Switch|Slider|Toast|Alert|Banner|Breadcrumb|Pagination|Sidebar|Header|Footer|Menu|Popover)\b/g);
-    const uniqueComponents = componentMatches ? [...new Set(componentMatches)] : [];
-
-    if (uniqueComponents.length > 0) {
-        const comp = uniqueComponents[0];
-        suggestions.push(`Show ${comp} accessibility guidelines`);
-        if (suggestions.length < 3) {
-            suggestions.push(`View ${comp} code examples`);
-        }
-        if (uniqueComponents.length > 1 && suggestions.length < 3) {
-            suggestions.push(`Compare ${uniqueComponents[0]} and ${uniqueComponents[1]} variants`);
-        }
-    }
-
-    if (lower.includes('accessibility') || lower.includes('a11y') || lower.includes('wcag')) {
-        if (suggestions.length < 3) suggestions.push('Show WCAG compliance checklist');
-        if (suggestions.length < 3) suggestions.push('Keyboard navigation patterns');
-    }
-    if (lower.includes('token') || lower.includes('spacing') || lower.includes('color')) {
-        if (suggestions.length < 3) suggestions.push('List all design token categories');
-        if (suggestions.length < 3) suggestions.push('How to use tokens in CSS');
-    }
-    if (lower.includes('code') || lower.includes('import') || lower.includes('example')) {
-        if (suggestions.length < 3) suggestions.push('Show TypeScript interface');
-        if (suggestions.length < 3) suggestions.push('View related Storybook stories');
-    }
-
-    const fallbacks = [
-        'What components are available?',
-        'Show design token system',
-        'Accessibility best practices',
-        'Most popular components',
-        'How to customize themes',
-        'Component migration guide',
-    ];
-
-    const hash = content.split('').reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
-    let fallbackIdx = hash % fallbacks.length;
-    while (suggestions.length < 3) {
-        const fb = fallbacks[fallbackIdx % fallbacks.length];
-        if (!suggestions.includes(fb)) {
-            suggestions.push(fb);
-        }
-        fallbackIdx++;
-    }
-
-    return suggestions.slice(0, 3);
-}
-
-// --- Helper: extract text from AI SDK UIMessage ---
-
-function extractMessageText(msg: UIMessage): string {
-    if (!msg.parts || msg.parts.length === 0) return '';
-    return msg.parts
-        .filter((p): p is { type: 'text'; text: string } => p.type === 'text')
-        .map(p => p.text)
-        .join('\n\n');
-}
+// Rate limiter: 10 messages per minute
+const messageLimiter = createRateLimiter(10, 60_000);
 
 // Toast Component
 const ToastNotification = ({ message, type, onClose }: { message: string; type: 'success' | 'error' | 'info'; onClose: () => void }) => {
@@ -201,8 +69,8 @@ const ToastNotification = ({ message, type, onClose }: { message: string; type: 
         <div className={`fixed top-4 right-4 md:top-24 md:right-8 left-4 md:left-auto ${colors[type]} text-white px-4 py-3 md:px-5 rounded shadow-xl border-2 z-50 animate-in slide-in-from-right-4 flex items-center gap-3`}>
             {icons[type]}
             <span className="font-semibold text-sm md:text-base flex-1">{message}</span>
-            <button 
-                onClick={onClose} 
+            <button
+                onClick={onClose}
                 className="hover:opacity-70 transition-opacity flex-shrink-0"
                 aria-label="Close notification"
             >
@@ -247,165 +115,53 @@ const SuggestionChips = ({ suggestions, onSelect }: { suggestions: string[]; onS
 // --- Main Component ---
 
 export function ChatInterface() {
-    // Local display messages (with timestamps, images, sources, suggestions)
-    const [displayMessages, setDisplayMessages] = useState<LocalMessage[]>([]);
     const [input, setInput] = useState('');
     const [attachedFile, setAttachedFile] = useState<File | null>(null);
-    const [sessionStats, setSessionStats] = useState<SessionStats>({
-        queries: 0,
-        indicesSearched: 7,
-        componentsFound: 0,
-        screenshotsAnalyzed: 0
-    });
     const [showStats, setShowStats] = useState(false);
     const [showScrollButton, setShowScrollButton] = useState(false);
     const [toast, setToast] = useState<Toast | null>(null);
-    const [useStreaming, setUseStreaming] = useState(true);
-    const [isFallbackLoading, setIsFallbackLoading] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const messagesContainerRef = useRef<HTMLDivElement>(null);
 
-    // AI SDK streaming chat
-    const transport = useMemo(() => new DefaultChatTransport({
-        api: ALGOLIA_STREAM_URL,
-        headers: ALGOLIA_HEADERS,
-    }), []);
-
-    const {
-        messages: streamMessages,
-        sendMessage: sendStreamMessage,
-        status: chatStatus,
-        setMessages: setStreamMessages,
-        error: streamError,
-    } = useChat({
-        transport,
-        onError: (err) => {
-            console.error('Streaming error, falling back to non-streaming:', err);
-        },
-    });
-
-    const isStreaming = chatStatus === 'streaming' || chatStatus === 'submitted';
-    const isLoading = isStreaming || isFallbackLoading;
-
-    // Load conversation from localStorage on mount
-    useEffect(() => {
-        const savedMessages = localStorage.getItem('componentcompass_messages');
-        const savedStats = localStorage.getItem('componentcompass_stats');
-
-        if (savedMessages) {
-            try {
-                const parsed = JSON.parse(savedMessages);
-                setDisplayMessages(parsed.map((msg: LocalMessage) => ({
-                    ...msg,
-                    timestamp: new Date(msg.timestamp)
-                })));
-            } catch (e) {
-                console.error('Failed to load saved messages:', e);
-            }
-        }
-
-        if (savedStats) {
-            try {
-                setSessionStats(JSON.parse(savedStats));
-            } catch (e) {
-                console.error('Failed to load saved stats:', e);
-            }
-        }
+    const showToast = useCallback((message: string, type: 'success' | 'error' | 'info') => {
+        setToast({ message, type });
     }, []);
 
-    // Save conversation to localStorage whenever display messages change
-    useEffect(() => {
-        if (displayMessages.length > 0) {
-            localStorage.setItem('componentcompass_messages', JSON.stringify(displayMessages));
-        }
-    }, [displayMessages]);
+    // Use extracted hooks
+    const {
+        displayMessages,
+        setDisplayMessages,
+        sessionStats,
+        setSessionStats,
+        handleNewConversation,
+        exportConversation,
+        setStreamMessagesRef,
+    } = useMessages({ showToast });
 
-    useEffect(() => {
-        localStorage.setItem('componentcompass_stats', JSON.stringify(sessionStats));
-    }, [sessionStats]);
+    const {
+        isLoading,
+        isStreaming,
+        sendStreamMessage,
+        handleFallbackSend,
+        setStreamMessages,
+        useStreamingMode,
+    } = useStreamingChat({
+        displayMessages,
+        setDisplayMessages,
+        setSessionStats,
+        indexSources: INDEX_SOURCES,
+    });
 
-    // Sync streaming messages into display messages
-    useEffect(() => {
-        if (!useStreaming || streamMessages.length === 0) return;
+    // Wire up the ref so useMessages can clear stream messages on new conversation
+    setStreamMessagesRef.current = setStreamMessages as (messages: never[]) => void;
 
-        const lastStreamMsg = streamMessages[streamMessages.length - 1];
-        if (!lastStreamMsg || lastStreamMsg.role !== 'assistant') return;
-
-        const streamText = extractMessageText(lastStreamMsg);
-        if (!streamText) return;
-
-        setDisplayMessages(prev => {
-            const lastDisplay = prev[prev.length - 1];
-            if (lastDisplay && lastDisplay.role === 'assistant' && lastDisplay.id === lastStreamMsg.id) {
-                // Update existing streaming message
-                return prev.map(m =>
-                    m.id === lastStreamMsg.id
-                        ? { ...m, content: streamText }
-                        : m
-                );
-            } else if (lastDisplay && lastDisplay.role === 'user') {
-                // Create new assistant message from stream
-                return [...prev, {
-                    id: lastStreamMsg.id,
-                    role: 'assistant' as const,
-                    content: streamText,
-                    timestamp: new Date(),
-                }];
-            }
-            return prev;
-        });
-    }, [streamMessages, useStreaming]);
-
-    // When streaming finishes, add sources and suggestions
-    useEffect(() => {
-        if (chatStatus === 'ready' && streamMessages.length > 0 && useStreaming) {
-            const lastStreamMsg = streamMessages[streamMessages.length - 1];
-            if (lastStreamMsg?.role === 'assistant') {
-                const text = extractMessageText(lastStreamMsg);
-                if (text) {
-                    const sources = getSourceBadges(text);
-                    const suggestions = generateSuggestions(text);
-
-                    setDisplayMessages(prev => {
-                        return prev.map(m =>
-                            m.id === lastStreamMsg.id
-                                ? { ...m, content: text, sources, suggestions }
-                                : m
-                        );
-                    });
-
-                    trackMessageView([lastStreamMsg.id]);
-                }
-            }
-        }
-    }, [chatStatus, streamMessages, useStreaming]);
-
-    // Handle stream errors — switch to fallback and retry only if no content was streamed
-    useEffect(() => {
-        if (streamError && useStreaming) {
-            setUseStreaming(false);
-            // Only retry via fallback if the stream didn't already produce content
-            const lastMsg = displayMessages[displayMessages.length - 1];
-            if (!lastMsg || lastMsg.role !== 'assistant') {
-                console.warn('Streaming failed with no content, retrying via fallback.');
-                const lastUserMsg = [...displayMessages].reverse().find(m => m.role === 'user');
-                if (lastUserMsg) {
-                    handleFallbackSend(lastUserMsg.content, null);
-                }
-            } else {
-                // Stream produced partial content — add sources/suggestions to it
-                const text = lastMsg.content;
-                if (text && !lastMsg.sources) {
-                    const sources = getSourceBadges(text);
-                    const suggestions = generateSuggestions(text);
-                    setDisplayMessages(prev => prev.map(m =>
-                        m.id === lastMsg.id ? { ...m, sources, suggestions } : m
-                    ));
-                }
-            }
-        }
-    }, [streamError, useStreaming]); // eslint-disable-line react-hooks/exhaustive-deps
+    useKeyboardShortcuts({
+        handleNewConversation,
+        exportConversation,
+        toggleStats: useCallback(() => setShowStats(prev => !prev), []),
+        hasMessages: displayMessages.length > 0,
+    });
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -429,80 +185,6 @@ export function ChatInterface() {
         return () => container?.removeEventListener('scroll', handleScroll);
     }, []);
 
-    const showToast = useCallback((message: string, type: 'success' | 'error' | 'info') => {
-        setToast({ message, type });
-    }, []);
-
-    const handleNewConversation = useCallback(() => {
-        if (displayMessages.length > 0) {
-            const confirmed = window.confirm('Start a new conversation? Your current conversation will be cleared.');
-            if (confirmed) {
-                setDisplayMessages([]);
-                setStreamMessages([]);
-                setSessionStats({
-                    queries: 0,
-                    indicesSearched: 7,
-                    componentsFound: 0,
-                    screenshotsAnalyzed: 0
-                });
-                localStorage.removeItem('componentcompass_messages');
-                localStorage.removeItem('componentcompass_stats');
-                agentClient.resetSession();
-                showToast('New conversation started', 'success');
-            }
-        }
-    }, [displayMessages.length, setStreamMessages, showToast]);
-
-    const exportConversation = useCallback(() => {
-        const markdown = displayMessages.map(msg => {
-            const timestamp = msg.timestamp.toLocaleString('en-US', {
-                month: 'short',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-            });
-            const role = msg.role === 'user' ? 'USER' : 'COMPASS';
-            return `## ${role} · ${timestamp}\n\n${msg.content}\n\n---\n`;
-        }).join('\n');
-
-        const header = `# ComponentCompass Session Map\n\nExported: ${new Date().toLocaleString()}\n\n**Session Statistics:**\n- Queries: ${sessionStats.queries}\n- Indices Searched: ${sessionStats.indicesSearched}\n- Components Found: ${sessionStats.componentsFound}\n- Screenshots Analyzed: ${sessionStats.screenshotsAnalyzed}\n\n---\n\n`;
-
-        const fullContent = header + markdown;
-
-        const blob = new Blob([fullContent], { type: 'text/markdown' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `component-compass-${Date.now()}.md`;
-        a.click();
-        URL.revokeObjectURL(url);
-
-        showToast('Conversation exported successfully!', 'success');
-    }, [displayMessages, sessionStats, showToast]);
-
-    // Keyboard shortcuts handler
-    useEffect(() => {
-        const handleKeyboard = (e: KeyboardEvent) => {
-            if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-                e.preventDefault();
-                handleNewConversation();
-            }
-
-            if ((e.metaKey || e.ctrlKey) && e.key === 'e' && displayMessages.length > 0) {
-                e.preventDefault();
-                exportConversation();
-            }
-
-            if ((e.metaKey || e.ctrlKey) && e.key === '/') {
-                e.preventDefault();
-                setShowStats(prev => !prev);
-            }
-        };
-
-        window.addEventListener('keydown', handleKeyboard);
-        return () => window.removeEventListener('keydown', handleKeyboard);
-    }, [displayMessages.length, handleNewConversation, exportConversation]);
-
     const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (file) {
@@ -517,45 +199,14 @@ export function ChatInterface() {
         }
     };
 
-    const handleFallbackSend = useCallback(async (messageContent: string, file: File | null) => {
-        setIsFallbackLoading(true);
-        try {
-            const response = await agentClient.sendMessage(messageContent);
-            const sources = getSourceBadges(response);
-            const suggestions = generateSuggestions(response);
-
-            const assistantMessage: LocalMessage = {
-                id: (Date.now() + 1).toString(),
-                role: 'assistant',
-                content: response,
-                timestamp: new Date(),
-                sources,
-                suggestions,
-            };
-            setDisplayMessages(prev => [...prev, assistantMessage]);
-
-            setSessionStats(prev => ({
-                ...prev,
-                queries: prev.queries + 1,
-                componentsFound: prev.componentsFound + (messageContent.match(/\b(Button|Card|Modal|Input|Select|Dialog|Checkbox|Badge|Toast|Accordion|Alert|Nav|Tab)\b/gi) || [messageContent]).length,
-                screenshotsAnalyzed: file?.type.startsWith('image/') ? prev.screenshotsAnalyzed + 1 : prev.screenshotsAnalyzed
-            }));
-        } catch (error) {
-            console.error('Failed to send message:', error);
-            const errorMessage: LocalMessage = {
-                id: (Date.now() + 1).toString(),
-                role: 'assistant',
-                content: `I encountered an issue searching the design system. This could be due to:\n\n- **Algolia Agent Studio configuration** — Check your \`.env\` file\n- **Network connectivity** — Verify your internet connection\n- **API rate limits** — You may have exceeded quota\n\n**Quick fixes:**\n1. Verify your \`VITE_ALGOLIA_AGENT_ID\` is correct\n2. Check that indices are properly configured\n3. Try again in a moment`,
-                timestamp: new Date(),
-            };
-            setDisplayMessages(prev => [...prev, errorMessage]);
-        } finally {
-            setIsFallbackLoading(false);
-        }
-    }, []);
-
     const handleSend = async () => {
         if ((!input.trim() && !attachedFile) || isLoading) return;
+
+        if (!messageLimiter.canProceed()) {
+            showToast('Please wait before sending more messages', 'error');
+            return;
+        }
+        messageLimiter.record();
 
         let messageContent = input;
         let imageUrl: string | undefined;
@@ -571,9 +222,9 @@ export function ChatInterface() {
             }
         }
 
-        const userMessage: LocalMessage = {
+        const userMessage = {
             id: Date.now().toString(),
-            role: 'user',
+            role: 'user' as const,
             content: messageContent,
             timestamp: new Date(),
             imageUrl,
@@ -588,7 +239,7 @@ export function ChatInterface() {
             fileInputRef.current.value = '';
         }
 
-        if (useStreaming) {
+        if (useStreamingMode) {
             try {
                 await sendStreamMessage({ text: messageContent });
                 setSessionStats(prev => ({
@@ -650,6 +301,14 @@ export function ChatInterface() {
 
     return (
         <div className="flex flex-col h-screen h-[100dvh] bg-parchment topo-background relative overflow-hidden">
+            {/* Skip Navigation */}
+            <a
+                href="#messages"
+                className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:px-4 focus:py-2 focus:bg-compass focus:text-white focus:rounded-lg focus:shadow-lg"
+            >
+                Skip to messages
+            </a>
+
             {/* Toast Notifications */}
             {toast && (
                 <ToastNotification
@@ -758,7 +417,7 @@ export function ChatInterface() {
             </header>
 
             {/* Messages Container */}
-            <div ref={messagesContainerRef} className="flex-1 overflow-y-auto px-3 py-4 md:px-6 md:py-8">
+            <div ref={messagesContainerRef} id="messages" className="flex-1 overflow-y-auto px-3 py-4 md:px-6 md:py-8">
                 <div className="max-w-4xl mx-auto space-y-6 md:space-y-8">
                     {/* Welcome Screen */}
                     {displayMessages.length === 0 && (
