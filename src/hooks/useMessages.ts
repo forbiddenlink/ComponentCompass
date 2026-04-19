@@ -39,37 +39,35 @@ const DEFAULT_STATS: SessionStats = {
     screenshotsAnalyzed: 0,
 };
 
+function loadSavedMessages(): LocalMessage[] {
+    const saved = localStorage.getItem('componentcompass_messages');
+    if (!saved) return [];
+    try {
+        const parsed = JSON.parse(saved);
+        return parsed.map((msg: LocalMessage) => ({
+            ...msg,
+            timestamp: new Date(msg.timestamp),
+        }));
+    } catch {
+        return [];
+    }
+}
+
+function loadSavedStats(): SessionStats {
+    const saved = localStorage.getItem('componentcompass_stats');
+    if (!saved) return DEFAULT_STATS;
+    try {
+        return JSON.parse(saved);
+    } catch {
+        return DEFAULT_STATS;
+    }
+}
+
 export function useMessages({ showToast }: UseMessagesParams) {
-    const [displayMessages, setDisplayMessages] = useState<LocalMessage[]>([]);
-    const [sessionStats, setSessionStats] = useState<SessionStats>(DEFAULT_STATS);
+    const [displayMessages, setDisplayMessages] = useState<LocalMessage[]>(loadSavedMessages);
+    const [sessionStats, setSessionStats] = useState<SessionStats>(loadSavedStats);
     // Ref to setStreamMessages — set by the caller after useStreamingChat initializes
     const setStreamMessagesRef = useRef<((messages: never[]) => void) | null>(null);
-
-    // Load conversation from localStorage on mount
-    useEffect(() => {
-        const savedMessages = localStorage.getItem('componentcompass_messages');
-        const savedStats = localStorage.getItem('componentcompass_stats');
-
-        if (savedMessages) {
-            try {
-                const parsed = JSON.parse(savedMessages);
-                setDisplayMessages(parsed.map((msg: LocalMessage) => ({
-                    ...msg,
-                    timestamp: new Date(msg.timestamp)
-                })));
-            } catch (e) {
-                console.error('Failed to load saved messages:', e);
-            }
-        }
-
-        if (savedStats) {
-            try {
-                setSessionStats(JSON.parse(savedStats));
-            } catch (e) {
-                console.error('Failed to load saved stats:', e);
-            }
-        }
-    }, []);
 
     // Save conversation to localStorage whenever display messages change
     useEffect(() => {

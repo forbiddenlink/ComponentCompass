@@ -154,7 +154,9 @@ export function ChatInterface() {
     });
 
     // Wire up the ref so useMessages can clear stream messages on new conversation
-    setStreamMessagesRef.current = setStreamMessages as (messages: never[]) => void;
+    useEffect(() => {
+        setStreamMessagesRef.current = setStreamMessages as (messages: never[]) => void;
+    }, [setStreamMessages, setStreamMessagesRef]);
 
     useKeyboardShortcuts({
         handleNewConversation,

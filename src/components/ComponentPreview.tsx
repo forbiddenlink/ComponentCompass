@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 /**
  * ComponentPreview - Sandpack-based live component preview
  *

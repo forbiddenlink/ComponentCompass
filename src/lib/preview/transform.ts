@@ -36,7 +36,7 @@ export function ensureDefaultExport(code: string): string {
 // Convert TypeScript to JavaScript (basic transformation)
 export function stripTypeScript(code: string): string {
     // Remove type annotations
-    let result = code
+    const result = code
         // Remove interface declarations
         .replace(/interface\s+\w+\s*\{[^}]*\}/g, '')
         // Remove type declarations
