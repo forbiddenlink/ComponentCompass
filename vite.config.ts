@@ -10,12 +10,19 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        manualChunks: {
-          // Vendor chunks for better caching
-          'react-vendor': ['react', 'react-dom'],
-          'algolia-vendor': ['algoliasearch', '@algolia/client-insights'],
-          'ai-vendor': ['ai', '@ai-sdk/react'],
-          'markdown-vendor': ['react-markdown', 'prism-react-renderer'],
+        manualChunks(id) {
+          if (id.includes('node_modules/react-dom') || id.includes('node_modules/react/')) {
+            return 'react-vendor';
+          }
+          if (id.includes('node_modules/algoliasearch') || id.includes('node_modules/@algolia')) {
+            return 'algolia-vendor';
+          }
+          if (id.includes('node_modules/ai/') || id.includes('node_modules/@ai-sdk')) {
+            return 'ai-vendor';
+          }
+          if (id.includes('node_modules/react-markdown') || id.includes('node_modules/prism-react-renderer')) {
+            return 'markdown-vendor';
+          }
         },
       },
     },
