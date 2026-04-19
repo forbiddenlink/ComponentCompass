@@ -7,7 +7,6 @@ interface EnvConfig {
   VITE_ALGOLIA_APP_ID: string;
   VITE_ALGOLIA_SEARCH_API_KEY: string;
   VITE_ALGOLIA_AGENT_ID: string;
-  VITE_OPENAI_API_KEY?: string; // Optional - only needed for screenshot analysis
 }
 
 class EnvValidationError extends Error {
@@ -59,7 +58,6 @@ function validateEnv(): EnvConfig {
     VITE_ALGOLIA_APP_ID: import.meta.env.VITE_ALGOLIA_APP_ID,
     VITE_ALGOLIA_SEARCH_API_KEY: import.meta.env.VITE_ALGOLIA_SEARCH_API_KEY,
     VITE_ALGOLIA_AGENT_ID: import.meta.env.VITE_ALGOLIA_AGENT_ID,
-    VITE_OPENAI_API_KEY: import.meta.env.VITE_OPENAI_API_KEY,
   };
 }
 
@@ -77,15 +75,11 @@ export function getEnv(): EnvConfig {
 }
 
 /**
- * Check if OpenAI API key is configured (for screenshot analysis)
+ * Vision analysis is now handled by server-side proxy at /api/vision
+ * No client-side API key needed
  */
-export function hasOpenAIKey(): boolean {
-  try {
-    const env = getEnv();
-    return !!env.VITE_OPENAI_API_KEY;
-  } catch {
-    return false;
-  }
+export function hasVisionSupport(): boolean {
+  return true;
 }
 
 /**

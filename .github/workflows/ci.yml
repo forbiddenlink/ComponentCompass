@@ -14,4 +14,10 @@ jobs:
           node-version: '22'
           cache: 'npm'
       - run: npm ci
+      - run: npm run lint
       - run: npm run build
+      - run: npm test -- --run
+        env:
+          VITE_ALGOLIA_APP_ID: test
+          VITE_ALGOLIA_SEARCH_API_KEY: test
+          VITE_ALGOLIA_AGENT_ID: test
