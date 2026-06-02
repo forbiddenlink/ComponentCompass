@@ -12,6 +12,7 @@ import { cn } from '../lib/utils';
 import { imageToBase64 } from '../services/vision';
 import { GALLERY_EXAMPLES } from '../data/gallery';
 import { TraceLines } from './TraceLines';
+import { AmbientTrace } from './AmbientTrace';
 import {
   A11Y_ENTRY_SOURCE,
   A11Y_RUNNER_SOURCE,
@@ -621,6 +622,234 @@ function CompareView({ imageUrl, preview }: { imageUrl: string; preview: React.R
   );
 }
 
+/**
+ * The empty-state hero. Recomposed from "dropzone + 3 bordered cards + 2×2 grid"
+ * into an editorial composition: an oversized asymmetric headline, the dropzone
+ * as a precision capture plate, an ambient looping demonstration of a real trace,
+ * editorial step numerals (01/02/03) over hairlines (not boxes), and the gallery
+ * as annotated drafting specimen plates. One clear focal point: the capture plate
+ * paired with the live demo. Generous negative space; varied scale + weight.
+ */
+function EmptyState({
+  isDragging,
+  error,
+  fileInputRef,
+  onDragOver,
+  onDragLeave,
+  onDrop,
+  onChooseFile,
+  onTrySample,
+  onFile,
+  onLoadExample,
+}: {
+  isDragging: boolean;
+  error: string | null;
+  fileInputRef: React.RefObject<HTMLInputElement | null>;
+  onDragOver: (e: React.DragEvent) => void;
+  onDragLeave: () => void;
+  onDrop: (e: React.DragEvent) => void;
+  onChooseFile: () => void;
+  onTrySample: () => void;
+  onFile: (file: File) => void;
+  onLoadExample: (example: (typeof GALLERY_EXAMPLES)[number]) => void;
+}) {
+  return (
+    <div className="pb-10">
+      {/* ── HERO ─────────────────────────────────────────────────────────
+          Asymmetric two-column: editorial headline + capture instrument on the
+          left, the live ambient trace demonstration on the right. */}
+      <div className="grid gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:gap-14 pt-2 md:pt-8">
+        {/* Left: the pitch + the capture plate. */}
+        <div className="flex flex-col">
+          <span className="annotate text-ocean">studio · screenshot to component</span>
+          {/* Oversized display headline with real typographic hierarchy: the verb
+              "Trace" carries the most weight; the object reads lighter + larger. */}
+          <h1 className="mt-4 font-display text-ink leading-[0.98] tracking-[-0.03em]">
+            <span className="block text-[clamp(2.6rem,6vw,4.25rem)] font-bold">Trace</span>
+            <span className="block text-[clamp(2.6rem,6vw,4.25rem)] font-light text-graphite">
+              any screenshot
+            </span>
+            <span className="block text-[clamp(2.6rem,6vw,4.25rem)] font-bold">
+              into <span className="text-compass">live React.</span>
+            </span>
+          </h1>
+          <p className="mt-6 max-w-md text-body text-graphite leading-relaxed">
+            Drop a UI screenshot. Trace detects each element, maps it to your
+            design-system catalog, and renders a real, editable component you can
+            ship.
+          </p>
+
+          {/* The capture plate: a precision instrument, the visual star of the
+              left column. Reticle corners + a measurement annotation. */}
+          <div
+            onDragOver={onDragOver}
+            onDragLeave={onDragLeave}
+            onDrop={onDrop}
+            className={cn(
+              'reticle pad-margin draft-plate mt-8 border-hair px-7 py-9 transition-colors',
+              isDragging ? 'border-compass bg-compass/[0.05]' : 'border-line-strong',
+            )}
+          >
+            <div className="flex items-center justify-between">
+              <span className="annotate text-ocean">capture plate</span>
+              <span className="annotate text-muted normal-case tracking-normal">
+                png · paste · drop
+              </span>
+            </div>
+            <p className="mt-4 font-display text-2xl font-semibold text-ink leading-tight">
+              {isDragging ? 'Release to trace it' : 'Drop a screenshot here'}
+            </p>
+            <p className="mt-1.5 text-small text-muted">
+              Paste from your clipboard with Cmd or Ctrl plus V, or pick a file.
+            </p>
+            <div className="mt-6 flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                onClick={onChooseFile}
+                className="px-5 py-2.5 rounded bg-compass text-white text-sm font-display font-semibold hover:bg-compass-dark focus:outline-none focus:ring-2 focus:ring-compass/40"
+              >
+                Choose file
+              </button>
+              <button
+                type="button"
+                onClick={onTrySample}
+                className="px-5 py-2.5 rounded border-hair border-line-strong text-ink text-sm font-display font-semibold hover:bg-ink/5 focus:outline-none focus:ring-2 focus:ring-compass/40"
+              >
+                Try a live sample
+              </button>
+            </div>
+            {/* Measurement annotation: reads like a schematic dimension on the plate. */}
+            <DimensionLine label="capture · ≤ 4 MB · PNG / JPG" className="mt-7" />
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) onFile(file);
+              }}
+            />
+            {error && (
+              <p className="mt-4 text-sm text-compass" role="alert">
+                {error}
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Right: the ambient demonstration — show, don't tell. A faint sample is
+            scanned by a reticle, trace-lines draw to detection labels, then loops. */}
+        <div className="relative hidden lg:block">
+          <span className="annotate text-ocean">live · what trace does</span>
+          <div className="reticle draft-plate mt-3 border-hair border-line-default p-4">
+            <AmbientTrace className="aspect-[4/3] w-full" />
+          </div>
+          <p className="mt-3 text-right text-[11px] text-muted font-mono">
+            screenshot → detection → component
+          </p>
+        </div>
+      </div>
+
+      {/* ── HOW IT READS — editorial numerals over hairlines, not boxes ─────── */}
+      <div className="mt-16 md:mt-24 border-t-hair border-line-strong pt-8">
+        <span className="annotate text-ocean">the method</span>
+        <div className="mt-5 grid gap-px sm:grid-cols-3 sm:divide-x sm:divide-line-soft">
+          {[
+            ['01', 'Capture', 'Hand Trace any interface screenshot — paste, drop, or upload.'],
+            ['02', 'Detect', 'Each element is mapped to a catalog component, with a confidence reading and an honest grounding tag.'],
+            ['03', 'Render', 'A real, editable React component renders live in a sandbox, scored for accessibility.'],
+          ].map(([n, title, desc], i) => (
+            <div key={n} className={cn('flex flex-col', i > 0 && 'sm:pl-6', 'pt-6 sm:pt-0')}>
+              {/* Oversized outline index numeral — the editorial anchor. */}
+              <span
+                className="font-display text-[3.25rem] leading-none font-bold text-transparent"
+                style={{ WebkitTextStroke: '1px rgba(197,72,46,0.55)' }}
+                aria-hidden="true"
+              >
+                {n}
+              </span>
+              <p className="mt-3 font-display text-lg font-semibold text-ink">{title}</p>
+              <p className="mt-1.5 max-w-xs text-small text-graphite leading-relaxed">{desc}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── GALLERY — drafting specimen plates, annotated + asymmetric ──────── */}
+      {GALLERY_EXAMPLES.length > 0 && (
+        <div className="mt-16 md:mt-24 border-t-hair border-line-strong pt-8">
+          <div className="flex items-baseline justify-between gap-3">
+            <div>
+              <span className="annotate text-ocean">specimen gallery</span>
+              <p className="mt-1.5 font-display text-h2 text-ink">Traced, ready to inspect</p>
+            </div>
+            <span className="hidden sm:inline text-[11px] text-muted font-mono">
+              pre-traced · no upload or key
+            </span>
+          </div>
+          {/* Asymmetric composition: one large featured plate, then a row of the
+              remaining specimens — a composed specimen sheet, not a uniform 2×2 grid. */}
+          {(() => {
+            const [featured, ...rest] = GALLERY_EXAMPLES;
+            const plate = (
+              example: (typeof GALLERY_EXAMPLES)[number],
+              i: number,
+              opts: { featured?: boolean },
+            ) => (
+              <button
+                type="button"
+                onClick={() => onLoadExample(example)}
+                className="group reticle flex h-full w-full flex-col gap-2.5 border-hair border-line-default bg-warm-white p-3 text-left transition-colors hover:border-compass focus:outline-none focus:ring-2 focus:ring-compass/40"
+              >
+                <div className="flex items-baseline justify-between">
+                  <span className="font-mono text-[10px] tabular-nums text-compass">
+                    {String(i + 1).padStart(2, '0')}
+                  </span>
+                  <span className="annotate text-muted normal-case tracking-normal">
+                    {opts.featured ? 'featured specimen' : 'specimen'}
+                  </span>
+                </div>
+                <img
+                  src={example.thumbnail}
+                  alt={`${example.title} example`}
+                  loading="lazy"
+                  className={cn(
+                    'w-full border-hair border-line-soft bg-white object-cover object-top transition-transform group-hover:scale-[1.01]',
+                    opts.featured ? 'h-52 md:h-64' : 'h-28',
+                  )}
+                />
+                <div className="flex items-center justify-between gap-2 pt-0.5">
+                  <span className="text-sm font-display font-semibold text-ink group-hover:text-compass">
+                    {example.title}
+                  </span>
+                  <span className="font-mono text-[10px] text-muted opacity-0 transition-opacity group-hover:opacity-100">
+                    open →
+                  </span>
+                </div>
+              </button>
+            );
+            return (
+              <div className="mt-6 flex flex-col gap-4">
+                {featured && (
+                  <div className="md:max-w-[60%]">{plate(featured, 0, { featured: true })}</div>
+                )}
+                {rest.length > 0 && (
+                  <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+                    {rest.map((example, idx) => (
+                      <li key={example.id}>{plate(example, idx + 1, {})}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            );
+          })()}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function ScreenshotStudio() {
   const [status, setStatus] = useState<Status>('idle');
   const [error, setError] = useState<string | null>(null);
@@ -822,130 +1051,44 @@ export function ScreenshotStudio() {
   return (
     <div className="h-full overflow-y-auto bg-parchment">
       <div className="max-w-[88rem] mx-auto px-5 py-6 md:px-8 md:py-8">
-        <header className="mb-7 flex items-end justify-between gap-4 border-b-hair border-line-strong pb-5">
-          <div className="max-w-2xl">
-            <span className="annotate text-ocean">studio</span>
-            <h1 className="font-display text-h1 text-ink mt-1.5">Trace a screenshot</h1>
-            <p className="text-small text-graphite mt-2 leading-relaxed">
-              Paste, drop, or upload a UI screenshot. Trace recreates it as a live, editable React
-              component grounded in the design-system catalog.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={toggleDark}
-            aria-pressed={dark}
-            title="Toggle editor theme"
-            className="flex-shrink-0 px-3 py-1.5 rounded border-hair border-line-strong text-ink text-xs font-display font-semibold hover:bg-ink/5 focus:outline-none focus:ring-2 focus:ring-compass/40"
-          >
-            {dark ? '☀ Light editor' : '☾ Dark editor'}
-          </button>
-        </header>
+        {showWorkspace && (
+          <header className="mb-7 flex items-end justify-between gap-4 border-b-hair border-line-strong pb-5">
+            <div className="max-w-2xl">
+              <span className="annotate text-ocean">studio</span>
+              <h1 className="font-display text-h1 text-ink mt-1.5">Trace a screenshot</h1>
+              <p className="text-small text-graphite mt-2 leading-relaxed">
+                Paste, drop, or upload a UI screenshot. Trace recreates it as a live, editable React
+                component grounded in the design-system catalog.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={toggleDark}
+              aria-pressed={dark}
+              title="Toggle editor theme"
+              className="flex-shrink-0 px-3 py-1.5 rounded border-hair border-line-strong text-ink text-xs font-display font-semibold hover:bg-ink/5 focus:outline-none focus:ring-2 focus:ring-compass/40"
+            >
+              {dark ? '☀ Light editor' : '☾ Dark editor'}
+            </button>
+          </header>
+        )}
 
         {!showWorkspace && (
-          <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr] lg:items-start">
-            {/* Dropzone: a drafting plate with reticle corners + construction grid. */}
-            <div
-              onDragOver={(e) => {
-                e.preventDefault();
-                setIsDragging(true);
-              }}
-              onDragLeave={() => setIsDragging(false)}
-              onDrop={onDrop}
-              className={cn(
-                'reticle pad-margin draft-plate border-hair p-10 md:p-14 text-center transition-colors',
-                isDragging ? 'border-compass bg-compass/[0.04]' : 'border-line-strong',
-              )}
-            >
-              <span className="annotate text-ocean">source · input</span>
-              <p className="font-display text-xl font-semibold text-ink mt-3">
-                {isDragging ? 'Release to trace it' : 'Drop a screenshot here'}
-              </p>
-              <p className="text-small text-muted mt-1.5">
-                Drag in a PNG, paste from your clipboard with Cmd or Ctrl plus V, or pick a file.
-              </p>
-              <div className="mt-5 flex items-center justify-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="px-4 py-2 rounded bg-compass text-white text-sm font-display font-semibold hover:bg-compass-dark focus:outline-none focus:ring-2 focus:ring-compass/40"
-                >
-                  Choose file
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void generate(SAMPLE_DATA_URL)}
-                  className="px-4 py-2 rounded border-hair border-line-strong text-ink text-sm font-display font-semibold hover:bg-ink/5 focus:outline-none focus:ring-2 focus:ring-compass/40"
-                >
-                  Try a live sample
-                </button>
-              </div>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) void handleFile(file);
-                }}
-              />
-              {status === 'error' && error && (
-                <p className="mt-4 text-sm text-compass" role="alert">
-                  {error}
-                </p>
-              )}
-            </div>
-
-            {/* How it reads, in the drafting voice + the gallery row. */}
-            <div className="flex flex-col gap-6">
-              <ol className="flex flex-col border-hair border-line-default bg-warm-white">
-                {[
-                  ['01', 'Capture', 'Hand Trace any interface screenshot.'],
-                  ['02', 'Detect', 'It maps each element to a catalog component, with a confidence reading.'],
-                  ['03', 'Render', 'A real, editable React component renders live, scored for accessibility.'],
-                ].map(([n, title, desc]) => (
-                  <li key={n} className="flex gap-3.5 px-4 py-3.5 border-t-hair border-line-soft first:border-t-0">
-                    <span className="font-mono text-xs text-ocean tabular-nums pt-0.5">{n}</span>
-                    <div>
-                      <p className="font-display text-sm font-semibold text-ink">{title}</p>
-                      <p className="text-small text-graphite mt-0.5 leading-relaxed">{desc}</p>
-                    </div>
-                  </li>
-                ))}
-              </ol>
-
-              {GALLERY_EXAMPLES.length > 0 && (
-                <div className="border-hair border-line-default bg-warm-white p-4 text-left">
-                  <div className="flex items-baseline justify-between gap-2">
-                    <span className="annotate text-ocean">gallery</span>
-                    <span className="text-[11px] text-muted">pre-traced · no upload or key</span>
-                  </div>
-                  <ul className="mt-3 grid grid-cols-2 gap-2.5 sm:grid-cols-2">
-                    {GALLERY_EXAMPLES.map((example) => (
-                      <li key={example.id}>
-                        <button
-                          type="button"
-                          onClick={() => loadExample(example)}
-                          className="group flex w-full flex-col gap-2 rounded-sm border-hair border-line-default bg-parchment p-2 text-left transition-colors hover:border-compass focus:outline-none focus:ring-2 focus:ring-compass/40"
-                        >
-                          <img
-                            src={example.thumbnail}
-                            alt={`${example.title} example`}
-                            loading="lazy"
-                            className="h-24 w-full rounded-sm border-hair border-line-soft bg-white object-cover object-top"
-                          />
-                          <span className="text-xs font-display font-semibold text-ink group-hover:text-compass">
-                            {example.title}
-                          </span>
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-          </div>
+          <EmptyState
+            isDragging={isDragging}
+            error={status === 'error' ? error : null}
+            fileInputRef={fileInputRef}
+            onDragOver={(e) => {
+              e.preventDefault();
+              setIsDragging(true);
+            }}
+            onDragLeave={() => setIsDragging(false)}
+            onDrop={onDrop}
+            onChooseFile={() => fileInputRef.current?.click()}
+            onTrySample={() => void generate(SAMPLE_DATA_URL)}
+            onFile={(file) => void handleFile(file)}
+            onLoadExample={loadExample}
+          />
         )}
 
         {showWorkspace && status === 'error' && error && (
@@ -1004,7 +1147,7 @@ export function ScreenshotStudio() {
               </div>
               <div
                 className={cn(
-                  'reticle draft-plate border-hair border-line-strong p-3',
+                  'reticle draft-plate border-hair border-line-default p-3',
                   status === 'ready' && 'reticle-lock',
                 )}
               >
@@ -1098,7 +1241,7 @@ export function ScreenshotStudio() {
               </div>
               <div
                 className={cn(
-                  'reticle border-hair border-line-strong overflow-hidden min-h-[480px] bg-warm-white',
+                  'reticle border border-line-strong overflow-hidden min-h-[480px] bg-warm-white shadow-md',
                   status === 'ready' && code && 'reticle-lock',
                 )}
                 style={{ viewTransitionName: 'trace-preview-frame' }}
@@ -1187,7 +1330,7 @@ export function ScreenshotStudio() {
             {/* ZONE 3 · INSPECTOR — what the AI sees: detections, catalog, notes. */}
             <aside className="flex flex-col">
               <span className="annotate text-ocean mb-2 inline-block">inspector · what the ai sees</span>
-              <div className="border-hair border-line-strong bg-warm-white">
+              <div className="border-hair border-line-default bg-warm-white">
                 {status === 'loading' && !result && (
                   <div className="flex items-center gap-2.5 px-4 py-4 text-graphite text-small">
                     <div className="w-4 h-4 border-2 border-compass border-t-transparent rounded-full animate-spin" />
@@ -1197,11 +1340,13 @@ export function ScreenshotStudio() {
 
                 {result && (
                   <>
-                    {/* Detected-component tally, counting up on reveal. */}
-                    <div className="flex items-baseline gap-1.5 px-4 py-3 border-b-hair border-line-default">
+                    {/* Detected-component tally, counting up on reveal. A measured
+                        readout: big figure on a vermilion gradation rule. */}
+                    <div className="relative flex items-baseline gap-2 px-4 py-3.5 border-b-hair border-line-default">
+                      <span className="absolute left-0 top-3.5 bottom-3.5 w-0.5 rounded-full bg-compass" />
                       <CountUp
                         value={result.detections.length}
-                        className="font-display text-xl font-bold leading-none text-ink"
+                        className="font-display text-2xl font-bold leading-none text-ink"
                       />
                       <span className="annotate normal-case tracking-normal text-muted">
                         component{result.detections.length === 1 ? '' : 's'} detected
