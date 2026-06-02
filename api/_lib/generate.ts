@@ -9,9 +9,8 @@
  */
 import { google } from '@ai-sdk/google';
 import { generateObject } from 'ai';
-import { transform } from 'esbuild';
 import { z } from 'zod';
-import catalog from '../../data/components_index_enhanced.json' with { type: 'json' };
+import catalog from './catalog';
 
 /** A single catalog component entry (shape of components_index_enhanced.json). */
 interface CatalogComponent {
@@ -172,6 +171,16 @@ issues above; do not reintroduce them.`;
  * @returns null on success, or the error message string on failure.
  */
 async function parseCheck(jsx: string): Promise<string | null> {
+  // esbuild ships a platform-specific native binary that is not reliably bundled
+  // into the Vercel serverless function, so import it dynamically and skip the
+  // check if it is unavailable. The client-side Sandpack error path still catches
+  // anything that slips through.
+  let transform: typeof import('esbuild').transform;
+  try {
+    ({ transform } = await import('esbuild'));
+  } catch {
+    return null;
+  }
   try {
     await transform(jsx, { loader: 'tsx' });
     return null;
