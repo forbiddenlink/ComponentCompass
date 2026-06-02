@@ -22,6 +22,12 @@ import {
   scoreBand,
   type A11yViolation,
 } from '../lib/preview/a11y';
+import {
+  friendlyError,
+  getConfidenceDisplay,
+  getGroundingMeta,
+  type Grounding,
+} from './ScreenshotStudio.logic';
 
 interface Detection {
   label: string;
@@ -30,7 +36,7 @@ interface Detection {
   confidence: number;
   /** [ymin, xmin, ymax, xmax] normalized 0-1000 (y first). Absent on older cached results. */
   box?: number[];
-  grounding?: 'grounded' | 'inferred' | 'guessed';
+  grounding?: Grounding;
 }
 
 interface GenResult {
@@ -80,24 +86,6 @@ const SAMPLE_DATA_URL =
     </svg>`,
   );
 
-/**
- * Map an HTTP status (and optional safe backend hint) to friendly, user-facing copy.
- * Never returns raw provider/internal error text in the empty state path.
- */
-function friendlyError(status: number, backendMessage: string): string {
-  // The only backend strings safe to show verbatim are our own input-validation
-  // messages (data URL / image too large / unsupported type). Everything else is
-  // mapped to a generic friendly line so provider internals never reach the UI.
-  const safe = /data url|too large|image type|unsupported|temporarily unavailable/i.test(
-    backendMessage,
-  );
-  if (safe && backendMessage) return backendMessage;
-  if (status === 413) return 'That image is too large. Please try one under 4 MB.';
-  if (status === 503) return 'Trace is temporarily unavailable. Please try again in a moment.';
-  if (status === 429) return 'Too many requests right now. Please wait a moment and try again.';
-  return 'Something went wrong while tracing this screenshot. Please try again.';
-}
-
 /** Fetch an image URL (e.g. a gallery example PNG) and convert it to a base64 data URL. */
 async function fetchImageAsDataUrl(url: string): Promise<string> {
   const res = await fetch(url);
@@ -142,11 +130,9 @@ async function svgDataUrlToPng(svgDataUrl: string, width: number, height: number
  * progress bar. 20 hairline ticks; the filled ticks read like a precision dial.
  * The numeric value stays in mono (raw data per the type rules).
  */
-function ConfidenceBar({ value }: { value: number }) {
-  const clamped = Math.max(0, Math.min(1, value));
-  const pct = Math.round(clamped * 100);
+export function ConfidenceBar({ value }: { value: number }) {
   const TICKS = 20;
-  const filled = Math.round(clamped * TICKS);
+  const { pct, filled } = getConfidenceDisplay(value, TICKS);
   return (
     <div className="flex items-center gap-2.5" aria-label={`Confidence ${pct} percent`}>
       <div className="flex flex-1 items-end gap-px h-3.5" aria-hidden="true">
@@ -176,26 +162,15 @@ function ConfidenceBar({ value }: { value: number }) {
  * mono chip in the inspector — guessed reads as the loudest (vermilion) so
  * uncertainty is visible, not hidden.
  */
-function GroundingTag({ grounding }: { grounding: 'grounded' | 'inferred' | 'guessed' }) {
-  const styles =
-    grounding === 'grounded'
-      ? 'border-terrain/40 text-terrain'
-      : grounding === 'inferred'
-        ? 'border-ocean/40 text-ocean'
-        : 'border-compass/50 text-compass border-dashed';
+export function GroundingTag({ grounding }: { grounding: Grounding }) {
+  const { styles, title } = getGroundingMeta(grounding);
   return (
     <span
       className={cn(
         'flex-shrink-0 rounded-sm border-hair px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider',
         styles,
       )}
-      title={
-        grounding === 'grounded'
-          ? 'Maps cleanly to a catalog component.'
-          : grounding === 'inferred'
-            ? 'Reasonable mapping with some uncertainty.'
-            : 'Low confidence / no good catalog match.'
-      }
+      title={title}
     >
       {grounding}
     </span>
@@ -324,7 +299,10 @@ function A11yScore({
 
   if (state.phase === 'pending') {
     return (
-      <div className="flex items-center gap-2.5 border-t-hair border-line-default bg-warm-white px-4 py-3 text-small text-muted">
+      <div
+        className="flex items-center gap-2.5 border-t-hair border-line-default bg-warm-white px-4 py-3 text-small text-muted"
+        data-testid="a11y-panel"
+      >
         <div className="w-3.5 h-3.5 border-2 border-ocean border-t-transparent rounded-full animate-spin" />
         Running accessibility check
       </div>
@@ -333,7 +311,11 @@ function A11yScore({
 
   if (state.phase === 'unavailable') {
     return (
-      <div className="border-t-hair border-line-default bg-warm-white px-4 py-3 text-small text-muted" role="status">
+      <div
+        className="border-t-hair border-line-default bg-warm-white px-4 py-3 text-small text-muted"
+        data-testid="a11y-panel"
+        role="status"
+      >
         Accessibility check unavailable.
       </div>
     );
@@ -347,7 +329,7 @@ function A11yScore({
     band === 'good' ? 'bg-terrain' : band === 'mid' ? 'bg-gold' : 'bg-compass';
 
   return (
-    <div className="border-t-hair border-line-default bg-warm-white px-4 py-3">
+    <div className="border-t-hair border-line-default bg-warm-white px-4 py-3" data-testid="a11y-panel">
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-3.5">
           {/* Measured numeric readout: big graphite figure on a colored gradation rule. */}
@@ -1464,6 +1446,7 @@ export function ScreenshotStudio() {
                                 ? 'border-compass ring-1 ring-compass/40'
                                 : 'border-compass/30',
                             )}
+                            data-testid="trace-bounding-box"
                             style={{
                               left: `${xmin / 10}%`,
                               top: `${ymin / 10}%`,

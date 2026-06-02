@@ -39,9 +39,9 @@ export interface TraceLinesProps {
   /** The element the SVG overlays (positions are computed relative to its rect). */
   containerRef: React.RefObject<HTMLDivElement | null>;
   /** Per-id bounding-box element on the source thumbnail. */
-  boxRefs: React.MutableRefObject<Map<string, HTMLElement | null>>;
+  boxRefs: React.RefObject<Map<string, HTMLElement | null>>;
   /** Per-id detection-row element in the inspector. */
-  rowRefs: React.MutableRefObject<Map<string, HTMLElement | null>>;
+  rowRefs: React.RefObject<Map<string, HTMLElement | null>>;
   /** The preview pane element (lines terminate at its left edge). */
   previewRef: React.RefObject<HTMLElement | null>;
   /** Currently hovered/focused detection id (null = none). */
@@ -165,6 +165,7 @@ export function TraceLines({
   return (
     <svg
       className="pointer-events-none absolute inset-0 z-20"
+      data-testid="trace-lines"
       width={size.w}
       height={size.h}
       viewBox={`0 0 ${size.w} ${size.h}`}
