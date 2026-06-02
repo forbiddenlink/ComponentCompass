@@ -61,10 +61,14 @@ function prefersReducedMotion(): boolean {
  * Source → inspector row: horizontal-first elbow at a vertical mid-line.
  * Inspector row → preview node: horizontal-first elbow.
  * Pure right-angle segments read as drafting construction lines.
+ *
+ * `offset` nudges each line's vertical mid-lines by a few px per index so parallel
+ * elbows don't stack onto the same column (which read as noise/clutter at wide
+ * widths). The routing stays orthogonal — just fanned slightly apart.
  */
-function elbowPath(p: TracePath): string {
-  const mid1 = (p.x1 + p.x2) / 2;
-  const mid2 = (p.x2 + p.x3) / 2;
+function elbowPath(p: TracePath, offset = 0): string {
+  const mid1 = (p.x1 + p.x2) / 2 + offset;
+  const mid2 = (p.x2 + p.x3) / 2 - offset;
   return [
     `M ${p.x1} ${p.y1}`,
     `H ${mid1}`,
@@ -169,14 +173,21 @@ export function TraceLines({
     >
       <title>Trace construction lines</title>
       {paths.map((p, i) => {
-        const active = hoveredId === null || hoveredId === p.id;
-        const baseOpacity = hoveredId === null ? 0.85 : active ? 1 : 0.18;
+        const isHovered = hoveredId === p.id;
+        // Lines read as precise, not noisy: faint by default, full opacity only on
+        // the hovered/focused line. With nothing hovered everything stays subdued so
+        // overlapping elbows don't pile into clutter at wide widths.
+        const baseOpacity = hoveredId === null ? 0.32 : isHovered ? 1 : 0.1;
+        // Fan parallel elbows apart by index so their vertical mid-lines don't stack.
+        const center = (paths.length - 1) / 2;
+        const offset = (i - center) * 7;
+        const d = elbowPath(p, offset);
         return (
           <g key={p.id} style={{ transition: 'opacity 0.2s ease' }} opacity={baseOpacity}>
             <motion.path
-              d={elbowPath(p)}
+              d={d}
               stroke="#C5482E"
-              strokeWidth={active && hoveredId !== null ? 1.4 : 1}
+              strokeWidth={isHovered ? 1.4 : 0.85}
               strokeLinecap="round"
               strokeLinejoin="round"
               strokeDasharray={p.guessed ? '3 3' : undefined}
@@ -188,29 +199,29 @@ export function TraceLines({
                   : { duration: 0.6, ease: 'easeInOut', delay: i * 0.1 }
               }
             />
-            {/* Travelling dash pulse along the same path (subtle), skipped on reduced motion. */}
-            {!reduced && (
+            {/* Travelling dash pulse — only on the hovered line, so it locates without
+                adding ambient motion noise across every line at once. */}
+            {!reduced && isHovered && (
               <motion.path
-                d={elbowPath(p)}
+                d={d}
                 stroke="#C5482E"
                 strokeWidth={1.4}
                 strokeLinecap="round"
                 strokeDasharray="2 64"
                 initial={{ strokeDashoffset: 0, opacity: 0 }}
-                animate={{ strokeDashoffset: -132, opacity: active ? 0.7 : 0 }}
+                animate={{ strokeDashoffset: -132, opacity: 0.7 }}
                 transition={{
                   strokeDashoffset: {
                     duration: 2.4,
                     ease: 'linear',
                     repeat: Infinity,
-                    delay: 0.6 + i * 0.1,
                   },
                   opacity: { duration: 0.3 },
                 }}
               />
             )}
             {/* Node dots: source exit, inspector entry, preview terminal. */}
-            <circle cx={p.x1} cy={p.y1} r={2.5} fill="#C5482E" />
+            <circle cx={p.x1} cy={p.y1} r={isHovered ? 2.5 : 2} fill="#C5482E" />
             <circle cx={p.x2} cy={p.y2} r={2} fill="#27496D" />
             <circle
               cx={p.x3}

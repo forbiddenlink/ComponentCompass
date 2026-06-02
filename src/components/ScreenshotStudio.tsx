@@ -112,6 +112,32 @@ async function fetchImageAsDataUrl(url: string): Promise<string> {
 }
 
 /**
+ * Rasterize an SVG data URL to a PNG data URL via an offscreen canvas. The live
+ * sample is authored as an SVG (self-contained, no asset to ship), but the
+ * generation API only accepts raster types (PNG/JPEG/WebP/GIF) — so "Try a live
+ * sample" must hand it a PNG. Returns a `data:image/png` URL the pipeline accepts.
+ */
+async function svgDataUrlToPng(svgDataUrl: string, width: number, height: number): Promise<string> {
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  await new Promise<void>((resolve, reject) => {
+    img.onload = () => resolve();
+    img.onerror = () => reject(new Error('Could not render the sample image.'));
+    img.src = svgDataUrl;
+  });
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('Could not render the sample image.');
+  // Flat parchment ground so any transparent SVG regions become opaque pixels.
+  ctx.fillStyle = '#F4F1EA';
+  ctx.fillRect(0, 0, width, height);
+  ctx.drawImage(img, 0, 0, width, height);
+  return canvas.toDataURL('image/png');
+}
+
+/**
  * Confidence as a fine measured tick-scale (a surveyor's gauge), not a full-width
  * progress bar. 20 hairline ticks; the filled ticks read like a precision dial.
  * The numeric value stays in mono (raw data per the type rules).
@@ -739,12 +765,15 @@ function EmptyState({
           </div>
         </div>
 
-        {/* Right: the ambient demonstration — show, don't tell. A faint sample is
-            scanned by a reticle, trace-lines draw to detection labels, then loops. */}
-        <div className="relative hidden lg:block">
+        {/* Right (lg) / below the plate (md): the ambient demonstration — show,
+            don't tell. A faint sample is scanned by a reticle, trace-lines draw to
+            detection labels, then loops. The demo is the identity-defining element,
+            so it stays visible at tablet (stacked below the plate) rather than being
+            hidden — which previously left a barren void to the right at ~768px. */}
+        <div className="relative block">
           <span className="annotate text-ocean">live · what trace does</span>
           <div className="reticle draft-plate mt-3 border-hair border-line-default p-4">
-            <AmbientTrace className="aspect-[4/3] w-full" />
+            <AmbientTrace className="mx-auto aspect-[4/3] w-full max-w-md lg:max-w-none" />
           </div>
           <p className="mt-3 text-right text-[11px] text-muted font-mono">
             screenshot → detection → component
@@ -816,8 +845,12 @@ function EmptyState({
                   alt={`${example.title} example`}
                   loading="lazy"
                   className={cn(
-                    'w-full border-hair border-line-soft bg-white object-cover object-top transition-transform group-hover:scale-[1.01]',
-                    opts.featured ? 'h-52 md:h-64' : 'h-28',
+                    // object-contain (not cover) so a portrait specimen is never cropped
+                    // mid-glyph at the frame's bottom edge (e.g. the Pricing card's "$29"
+                    // was clipped to "$2"). The whole specimen reads, letterboxed on the
+                    // warm-white plate ground.
+                    'w-full border-hair border-line-soft bg-white object-contain object-top transition-transform group-hover:scale-[1.01]',
+                    opts.featured ? 'h-52 md:h-64' : 'h-36',
                   )}
                 />
                 <div className="flex items-center justify-between gap-2 pt-0.5">
@@ -870,7 +903,7 @@ export function ScreenshotStudio() {
   const sourceImgRef = useRef<HTMLImageElement>(null);
   const annotationCanvasRef = useRef<HTMLCanvasElement>(null);
   const [hasStrokes, setHasStrokes] = useState(false);
-  const [rightView, setRightView] = useState<'code' | 'compare'>('code');
+  const [rightView, setRightView] = useState<'preview' | 'code' | 'compare'>('preview');
   const [dark, toggleDark] = useStudioTheme();
   const [hoveredDetectionId, setHoveredDetectionId] = useState<string | null>(null);
   // Natural pixel dimensions of the loaded source image, for the schematic
@@ -967,7 +1000,7 @@ export function ScreenshotStudio() {
       repairs: example.result.repairs,
     });
     setCode(example.result.jsx);
-    setRightView('code');
+    setRightView('preview');
     setStatus('ready');
     setRefineCount(0);
     setRefineInstruction('');
@@ -1181,6 +1214,22 @@ export function ScreenshotStudio() {
     [generate],
   );
 
+  /**
+   * "Try a live sample": rasterize the bundled SVG sample to a PNG the API accepts,
+   * then run it through the real generation pipeline. Any failure (rasterize error,
+   * quota, etc.) routes through the same friendly-error banner as a normal upload —
+   * never a silent no-op.
+   */
+  const handleTrySample = useCallback(async () => {
+    try {
+      const png = await svgDataUrlToPng(SAMPLE_DATA_URL, 640, 400);
+      await generate(png);
+    } catch {
+      setError('Could not load the live sample. Please try uploading a screenshot instead.');
+      setStatus('error');
+    }
+  }, [generate]);
+
   // Paste-from-clipboard support.
   useEffect(() => {
     const onPaste = (e: ClipboardEvent) => {
@@ -1278,7 +1327,7 @@ export function ScreenshotStudio() {
             onDragLeave={() => setIsDragging(false)}
             onDrop={onDrop}
             onChooseFile={() => fileInputRef.current?.click()}
-            onTrySample={() => void generate(SAMPLE_DATA_URL)}
+            onTrySample={() => void handleTrySample()}
             onFile={(file) => void handleFile(file)}
             onLoadExample={loadExample}
           />
@@ -1424,10 +1473,13 @@ export function ScreenshotStudio() {
                               opacity: active ? 1 : 0.45,
                             }}
                           >
-                            {/* Index chip at the box top-left. */}
+                            {/* Index chip at the box top-left. Sits flush INSIDE the
+                                box corner (no negative overhang) so on a shrunken
+                                small-screen source it never bleeds onto a neighbouring
+                                detection row. */}
                             <span
                               className={cn(
-                                'absolute -top-px -left-px px-1 font-mono text-[9px] leading-[1.4] tabular-nums text-white',
+                                'absolute top-0 left-0 px-0.5 font-mono text-[8px] leading-[1.3] tabular-nums text-white sm:px-1 sm:text-[9px] sm:leading-[1.4]',
                                 guessed ? 'bg-compass/70' : 'bg-compass',
                               )}
                             >
@@ -1536,7 +1588,7 @@ export function ScreenshotStudio() {
                       role="group"
                       aria-label="Preview view"
                     >
-                      {(['code', 'compare'] as const).map((mode) => (
+                      {(['preview', 'code', 'compare'] as const).map((mode) => (
                         <button
                           key={mode}
                           type="button"
@@ -1549,7 +1601,7 @@ export function ScreenshotStudio() {
                               : 'text-graphite hover:bg-ink/5',
                           )}
                         >
-                          {mode === 'code' ? 'Code + Preview' : 'Compare'}
+                          {mode === 'preview' ? 'Preview' : mode === 'code' ? 'Code' : 'Compare'}
                         </button>
                       ))}
                     </div>
@@ -1572,9 +1624,23 @@ export function ScreenshotStudio() {
                       </p>
                     </>
                   ) : (
-                    <SandpackLayout>
-                      <SandpackPreview showSandpackErrorOverlay style={{ height: 480 }} />
-                      <SandpackCodeEditor showLineNumbers style={{ height: 480 }} />
+                    // Preview and Code are switchable full-width tabs so each gets its
+                    // own legible width (the editor was previously crammed beside the
+                    // preview in a narrow column, showing ~1 line). Both panes stay
+                    // mounted and are toggled via `display` so the running iframe — and
+                    // the a11y runner + error watcher it hosts — is never torn down on
+                    // a tab switch; only one is visible at a time.
+                    <SandpackLayout style={{ flexDirection: 'column' }}>
+                      <div
+                        style={{ display: rightView === 'preview' ? 'block' : 'none', width: '100%' }}
+                      >
+                        <SandpackPreview showSandpackErrorOverlay style={{ height: 480 }} />
+                      </div>
+                      <div
+                        style={{ display: rightView === 'code' ? 'block' : 'none', width: '100%' }}
+                      >
+                        <SandpackCodeEditor showLineNumbers style={{ height: 480 }} />
+                      </div>
                     </SandpackLayout>
                   )}
                   <A11yScore jsx={code} onFix={handleFixA11y} isFixing={isFixing} />
