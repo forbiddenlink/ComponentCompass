@@ -65,7 +65,7 @@ async function main() {
   // so spin up a throwaway dev server in middleware mode and use ssrLoadModule.
   const { createServer } = await import('vite');
   const vite = await createServer({ root, server: { middlewareMode: true }, appType: 'custom' });
-  const mod = await vite.ssrLoadModule('/api/_lib/generate.ts');
+  const mod = await vite.ssrLoadModule('/api/generate.ts');
   const generateFromScreenshot = mod.generateFromScreenshot;
 
   const browser = await chromium.launch();

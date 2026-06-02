@@ -47,7 +47,7 @@ function devApiPlugin(): PluginOption {
                   repairReason: repairReason === 'a11y' ? 'a11y' : 'compile',
                 }
               : undefined
-          const mod = await server.ssrLoadModule('/api/_lib/generate.ts')
+          const mod = await server.ssrLoadModule('/api/generate.ts')
           const result = await mod.generateFromScreenshot(imageDataUrl, repair)
           res.statusCode = 200
           res.setHeader('Content-Type', 'application/json')
