@@ -43,18 +43,18 @@ const SAMPLE_DATA_URL =
   'data:image/svg+xml;base64,' +
   btoa(
     `<svg xmlns="http://www.w3.org/2000/svg" width="640" height="400">
-      <rect width="640" height="400" fill="#F9F6F0"/>
-      <rect x="40" y="40" width="560" height="120" rx="12" fill="#FFFAF3" stroke="#2C3E50" stroke-opacity="0.1"/>
-      <text x="64" y="84" font-family="serif" font-size="22" fill="#2C3E50">Welcome back</text>
-      <text x="64" y="116" font-family="sans-serif" font-size="14" fill="#2C3E50" opacity="0.7">Sign in to continue</text>
-      <rect x="40" y="190" width="560" height="44" rx="8" fill="#fff" stroke="#2C3E50" stroke-opacity="0.2"/>
-      <text x="56" y="218" font-family="sans-serif" font-size="13" fill="#2C3E50" opacity="0.5">Email</text>
-      <rect x="40" y="250" width="560" height="44" rx="8" fill="#fff" stroke="#2C3E50" stroke-opacity="0.2"/>
-      <text x="56" y="278" font-family="sans-serif" font-size="13" fill="#2C3E50" opacity="0.5">Password</text>
-      <rect x="40" y="320" width="180" height="44" rx="8" fill="#C45B3C"/>
+      <rect width="640" height="400" fill="#F4F1EA"/>
+      <rect x="40" y="40" width="560" height="120" rx="4" fill="#FBFAF5" stroke="#1F2933" stroke-opacity="0.12"/>
+      <text x="64" y="84" font-family="sans-serif" font-size="22" fill="#1F2933">Welcome back</text>
+      <text x="64" y="116" font-family="sans-serif" font-size="14" fill="#1F2933" opacity="0.7">Sign in to continue</text>
+      <rect x="40" y="190" width="560" height="44" rx="3" fill="#fff" stroke="#1F2933" stroke-opacity="0.22"/>
+      <text x="56" y="218" font-family="sans-serif" font-size="13" fill="#1F2933" opacity="0.55">Email</text>
+      <rect x="40" y="250" width="560" height="44" rx="3" fill="#fff" stroke="#1F2933" stroke-opacity="0.22"/>
+      <text x="56" y="278" font-family="sans-serif" font-size="13" fill="#1F2933" opacity="0.55">Password</text>
+      <rect x="40" y="320" width="180" height="44" rx="3" fill="#C5482E"/>
       <text x="92" y="348" font-family="sans-serif" font-size="14" fill="#fff">Sign in</text>
-      <rect x="236" y="320" width="140" height="44" rx="8" fill="#fff" stroke="#C45B3C"/>
-      <text x="272" y="348" font-family="sans-serif" font-size="14" fill="#C45B3C">Cancel</text>
+      <rect x="236" y="320" width="140" height="44" rx="3" fill="#fff" stroke="#C5482E"/>
+      <text x="272" y="348" font-family="sans-serif" font-size="14" fill="#C5482E">Cancel</text>
     </svg>`,
   );
 
@@ -89,14 +89,36 @@ async function fetchImageAsDataUrl(url: string): Promise<string> {
   });
 }
 
+/**
+ * Confidence as a fine measured tick-scale (a surveyor's gauge), not a full-width
+ * progress bar. 20 hairline ticks; the filled ticks read like a precision dial.
+ * The numeric value stays in mono (raw data per the type rules).
+ */
 function ConfidenceBar({ value }: { value: number }) {
-  const pct = Math.round(Math.max(0, Math.min(1, value)) * 100);
+  const clamped = Math.max(0, Math.min(1, value));
+  const pct = Math.round(clamped * 100);
+  const TICKS = 20;
+  const filled = Math.round(clamped * TICKS);
   return (
-    <div className="flex items-center gap-2" aria-label={`Confidence ${pct}%`}>
-      <div className="h-1.5 flex-1 rounded-full bg-ink/10 overflow-hidden">
-        <div className="h-full rounded-full bg-compass transition-all" style={{ width: `${pct}%` }} />
+    <div className="flex items-center gap-2.5" aria-label={`Confidence ${pct} percent`}>
+      <div className="flex flex-1 items-end gap-px h-3.5" aria-hidden="true">
+        {Array.from({ length: TICKS }).map((_, i) => {
+          const on = i < filled;
+          // Every 5th tick is a taller major gradation.
+          const major = i % 5 === 0;
+          return (
+            <span
+              key={i}
+              className={cn(
+                'flex-1 rounded-[0.5px] transition-colors',
+                on ? 'bg-compass' : 'bg-line-soft',
+                major ? 'h-full' : 'h-2',
+              )}
+            />
+          );
+        })}
       </div>
-      <span className="text-xs font-mono text-ink/60 w-9 text-right">{pct}%</span>
+      <span className="text-[11px] font-mono tabular-nums text-graphite w-9 text-right">{pct}%</span>
     </div>
   );
 }
@@ -134,16 +156,16 @@ function SandpackErrorWatcher({
 
   return (
     <div
-      className="flex flex-col gap-2 border-t border-compass/30 bg-compass/5 px-4 py-3"
+      className="flex flex-col gap-2 border-t-hair border-compass/40 bg-compass/[0.06] px-4 py-3"
       role="alert"
     >
-      <p className="text-sm font-medium text-compass">Preview error</p>
-      <p className="text-xs font-mono text-ink/70 line-clamp-3 whitespace-pre-wrap">{runtimeError}</p>
+      <span className="annotate text-compass">preview error</span>
+      <p className="text-xs font-mono text-graphite line-clamp-3 whitespace-pre-wrap">{runtimeError}</p>
       <button
         type="button"
         disabled={isFixing}
         onClick={() => onFix(runtimeError)}
-        className="self-start px-3 py-1.5 rounded-lg bg-compass text-white text-xs font-display font-semibold shadow-sm hover:bg-compass/90 focus:outline-none focus:ring-2 focus:ring-compass/40 disabled:opacity-60"
+        className="self-start px-3 py-1.5 rounded bg-compass text-white text-xs font-display font-semibold hover:bg-compass-dark focus:outline-none focus:ring-2 focus:ring-compass/40 disabled:opacity-60"
       >
         {isFixing ? 'Tracing the fix…' : 'Ask Trace to fix it'}
       </button>
@@ -223,16 +245,16 @@ function A11yScore({
 
   if (state.phase === 'pending') {
     return (
-      <div className="flex items-center gap-2 border-t border-ink/10 bg-warm-white px-4 py-3 text-sm text-ink/60">
-        <div className="w-4 h-4 border-2 border-ocean border-t-transparent rounded-full animate-spin" />
-        Running accessibility check…
+      <div className="flex items-center gap-2.5 border-t-hair border-line-default bg-warm-white px-4 py-3 text-small text-muted">
+        <div className="w-3.5 h-3.5 border-2 border-ocean border-t-transparent rounded-full animate-spin" />
+        Running accessibility check
       </div>
     );
   }
 
   if (state.phase === 'unavailable') {
     return (
-      <div className="border-t border-ink/10 bg-warm-white px-4 py-3 text-sm text-ink/50" role="status">
+      <div className="border-t-hair border-line-default bg-warm-white px-4 py-3 text-small text-muted" role="status">
         Accessibility check unavailable.
       </div>
     );
@@ -240,34 +262,33 @@ function A11yScore({
 
   const { score, violations } = state;
   const band = scoreBand(score);
-  const badgeClass =
-    band === 'good'
-      ? 'bg-terrain text-white'
-      : band === 'mid'
-        ? 'bg-gold text-ink'
-        : 'bg-compass text-white';
+  const scoreColor =
+    band === 'good' ? 'text-terrain' : band === 'mid' ? 'text-gold' : 'text-compass';
+  const ruleColor =
+    band === 'good' ? 'bg-terrain' : band === 'mid' ? 'bg-gold' : 'bg-compass';
 
   return (
-    <div className="border-t border-ink/10 bg-warm-white px-4 py-3">
+    <div className="border-t-hair border-line-default bg-warm-white px-4 py-3">
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div className="flex items-center gap-3">
-          <span
-            className={cn(
-              'inline-flex items-baseline gap-1 rounded-lg px-3 py-1.5 font-display font-semibold shadow-sm',
-              badgeClass,
-            )}
+        <div className="flex items-center gap-3.5">
+          {/* Measured numeric readout: big graphite figure on a colored gradation rule. */}
+          <div
+            className="relative flex items-baseline gap-0.5 pl-3"
             aria-label={`Accessibility score ${score} out of 100`}
           >
-            <span className="text-lg leading-none">{score}</span>
-            <span className="text-xs opacity-80">/100</span>
-          </span>
-          <div className="flex flex-col">
-            <span className="text-sm font-medium text-ink">Accessibility score</span>
+            <span className={cn('absolute left-0 top-0 bottom-0 w-0.5 rounded-full', ruleColor)} />
+            <span className={cn('font-display text-2xl font-bold leading-none tabular-nums', scoreColor)}>
+              {score}
+            </span>
+            <span className="font-mono text-[11px] text-muted">/100</span>
+          </div>
+          <div className="flex flex-col gap-0.5">
+            <span className="annotate">accessibility</span>
             <span
-              className="text-xs text-ink/50"
+              className="text-[11px] text-muted"
               title="Automated check via axe-core. Catches roughly half of WCAG issues, not a certification."
             >
-              automated check (axe-core){' '}
+              axe-core automated check{' '}
               <abbr title="axe-core catches ~57% of WCAG issues automatically. This is a directional signal, not a WCAG certification.">
                 ⓘ
               </abbr>
@@ -279,44 +300,47 @@ function A11yScore({
           type="button"
           disabled={violations.length === 0 || isFixing}
           onClick={() => onFix(violations)}
-          className="px-3 py-1.5 rounded-lg bg-ocean text-white text-xs font-display font-semibold shadow-sm hover:bg-ocean-dark focus:outline-none focus:ring-2 focus:ring-ocean/40 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="px-3 py-1.5 rounded border-hair border-ocean/50 bg-ocean text-white text-xs font-display font-semibold hover:bg-ocean-dark focus:outline-none focus:ring-2 focus:ring-ocean/40 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isFixing ? 'Fixing…' : 'Fix accessibility'}
         </button>
       </div>
 
       {violations.length > 0 ? (
-        <div className="mt-2">
+        <div className="mt-2.5">
           <button
             type="button"
             onClick={() => setExpanded((v) => !v)}
-            className="text-xs text-ink/60 hover:text-ink underline"
+            className="text-xs text-muted hover:text-ink underline underline-offset-2"
             aria-expanded={expanded}
           >
             {expanded ? 'Hide' : 'Show'} {violations.length} violation
             {violations.length === 1 ? '' : 's'}
           </button>
           {expanded && (
-            <ul className="mt-2 flex flex-col gap-2">
+            <ul className="mt-2 flex flex-col">
               {violations.map((v, i) => (
-                <li key={`${v.id}-${i}`} className="rounded-lg bg-parchment p-2.5">
+                <li
+                  key={`${v.id}-${i}`}
+                  className="border-t-hair border-line-soft py-2.5 first:border-t-0"
+                >
                   <div className="flex items-baseline justify-between gap-2">
                     <span className="text-xs font-mono text-ink">{v.id}</span>
                     {v.impact && (
                       <span
                         className={cn(
-                          'text-[10px] uppercase tracking-wide font-semibold px-1.5 py-0.5 rounded',
+                          'annotate px-1.5 py-0.5 rounded-sm',
                           v.impact === 'critical' || v.impact === 'serious'
-                            ? 'bg-compass/15 text-compass'
-                            : 'bg-gold/20 text-ink/70',
+                            ? 'bg-compass/12 text-compass'
+                            : 'bg-gold/15 text-gold',
                         )}
                       >
                         {v.impact}
                       </span>
                     )}
                   </div>
-                  <p className="text-xs text-ink/70 mt-1">{v.help}</p>
-                  <p className="text-[11px] text-ink/40 mt-0.5">
+                  <p className="text-xs text-graphite mt-1">{v.help}</p>
+                  <p className="text-[11px] text-muted mt-0.5 font-mono tabular-nums">
                     {v.nodeCount} node{v.nodeCount === 1 ? '' : 's'} affected
                   </p>
                 </li>
@@ -369,7 +393,7 @@ function CopyCodeButton({ code }: { code: string }) {
     <button
       type="button"
       onClick={() => void onCopy()}
-      className="px-3 py-1.5 rounded-lg border border-ink/20 text-ink text-xs font-display font-semibold hover:bg-ink/5 focus:outline-none focus:ring-2 focus:ring-compass/40"
+      className="px-3 py-1.5 rounded border-hair border-line-strong text-ink text-xs font-display font-semibold hover:bg-ink/5 focus:outline-none focus:ring-2 focus:ring-compass/40"
       aria-live="polite"
     >
       {copied ? 'Copied!' : 'Copy code'}
@@ -390,7 +414,7 @@ function CompareView({ imageUrl, preview }: { imageUrl: string; preview: React.R
         <ReactCompareSliderImage
           src={imageUrl}
           alt="Original screenshot"
-          style={{ objectFit: 'contain', background: '#F9F6F0' }}
+          style={{ objectFit: 'contain', background: '#F4F1EA' }}
         />
       }
       itemTwo={<div className="h-full w-full bg-white">{preview}</div>}
@@ -569,14 +593,15 @@ export function ScreenshotStudio() {
   const showWorkspace = status === 'loading' || status === 'ready' || (status === 'error' && hasResult);
 
   return (
-    <div className="h-full overflow-y-auto bg-parchment">
-      <div className="max-w-7xl mx-auto px-4 py-6">
-        <header className="mb-6 flex items-start justify-between gap-4">
-          <div>
-            <h1 className="font-display text-h1 text-ink">Screenshot Studio</h1>
-            <p className="text-sm text-ink/70 mt-1">
-              Paste, drop, or upload a UI screenshot. Gemini recreates it as a live, editable React
-              component grounded in the Trace component catalog.
+    <div className="h-full overflow-y-auto draft-grid bg-parchment">
+      <div className="max-w-[88rem] mx-auto px-5 py-6 md:px-8 md:py-8">
+        <header className="mb-7 flex items-end justify-between gap-4 border-b-hair border-line-strong pb-5">
+          <div className="max-w-2xl">
+            <span className="annotate text-ocean">studio</span>
+            <h1 className="font-display text-h1 text-ink mt-1.5">Trace a screenshot</h1>
+            <p className="text-small text-graphite mt-2 leading-relaxed">
+              Paste, drop, or upload a UI screenshot. Trace recreates it as a live, editable React
+              component grounded in the design-system catalog.
             </p>
           </div>
           <button
@@ -584,106 +609,127 @@ export function ScreenshotStudio() {
             onClick={toggleDark}
             aria-pressed={dark}
             title="Toggle editor theme"
-            className="flex-shrink-0 px-3 py-1.5 rounded-lg border border-ink/20 text-ink text-xs font-display font-semibold hover:bg-ink/5 focus:outline-none focus:ring-2 focus:ring-compass/40"
+            className="flex-shrink-0 px-3 py-1.5 rounded border-hair border-line-strong text-ink text-xs font-display font-semibold hover:bg-ink/5 focus:outline-none focus:ring-2 focus:ring-compass/40"
           >
             {dark ? '☀ Light editor' : '☾ Dark editor'}
           </button>
         </header>
 
         {!showWorkspace && (
-          <div
-            onDragOver={(e) => {
-              e.preventDefault();
-              setIsDragging(true);
-            }}
-            onDragLeave={() => setIsDragging(false)}
-            onDrop={onDrop}
-            className={cn(
-              'rounded-2xl border-2 border-dashed bg-warm-white p-10 text-center transition-colors',
-              isDragging ? 'border-compass bg-compass/5' : 'border-ink/15',
-            )}
-          >
-            <p className="font-display text-lg text-ink">
-              {isDragging ? 'Drop to trace it' : 'Drop a screenshot here'}
-            </p>
-            <p className="text-sm text-ink/60 mt-1">
-              Drag in a PNG, paste from your clipboard (Cmd/Ctrl+V), or
-            </p>
-            <div className="mt-4 flex items-center justify-center gap-3">
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="px-4 py-2 rounded-lg bg-compass text-white text-sm font-display font-semibold shadow-sm hover:bg-compass/90 focus:outline-none focus:ring-2 focus:ring-compass/40"
-              >
-                Choose file
-              </button>
-              <button
-                type="button"
-                onClick={() => void generate(SAMPLE_DATA_URL)}
-                className="px-4 py-2 rounded-lg border border-ink/20 text-ink text-sm font-display font-semibold hover:bg-ink/5 focus:outline-none focus:ring-2 focus:ring-compass/40"
-              >
-                Try a live sample
-              </button>
-            </div>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) void handleFile(file);
+          <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr] lg:items-start">
+            {/* Dropzone: a drafting plate with reticle corners + construction grid. */}
+            <div
+              onDragOver={(e) => {
+                e.preventDefault();
+                setIsDragging(true);
               }}
-            />
-            {status === 'error' && error && (
-              <p className="mt-4 text-sm text-compass" role="alert">
-                {error}
+              onDragLeave={() => setIsDragging(false)}
+              onDrop={onDrop}
+              className={cn(
+                'reticle draft-grid-strong border-hair p-10 md:p-14 text-center transition-colors',
+                isDragging ? 'border-compass bg-compass/[0.04]' : 'border-line-strong',
+              )}
+            >
+              <span className="annotate text-ocean">source · input</span>
+              <p className="font-display text-xl font-semibold text-ink mt-3">
+                {isDragging ? 'Release to trace it' : 'Drop a screenshot here'}
               </p>
-            )}
-
-            {GALLERY_EXAMPLES.length > 0 && (
-              <div className="mt-8 border-t border-ink/10 pt-6 text-left">
-                <p className="font-display text-sm font-semibold text-ink">
-                  Try an example{' '}
-                  <span className="ml-2 font-body font-normal text-xs text-ink/50">
-                    instant, pre-traced. No upload or API key needed.
-                  </span>
-                </p>
-                <ul className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
-                  {GALLERY_EXAMPLES.map((example) => (
-                    <li key={example.id}>
-                      <button
-                        type="button"
-                        onClick={() => loadExample(example)}
-                        className="group flex w-full flex-col gap-2 rounded-xl border border-ink/15 bg-parchment p-2 text-left transition-colors hover:border-compass focus:outline-none focus:ring-2 focus:ring-compass/40"
-                      >
-                        <img
-                          src={example.thumbnail}
-                          alt={`${example.title} example`}
-                          loading="lazy"
-                          className="h-28 w-full rounded-lg border border-ink/10 bg-white object-cover object-top"
-                        />
-                        <span className="text-xs font-display font-semibold text-ink group-hover:text-compass">
-                          {example.title}
-                        </span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
+              <p className="text-small text-muted mt-1.5">
+                Drag in a PNG, paste from your clipboard with Cmd or Ctrl plus V, or pick a file.
+              </p>
+              <div className="mt-5 flex items-center justify-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="px-4 py-2 rounded bg-compass text-white text-sm font-display font-semibold hover:bg-compass-dark focus:outline-none focus:ring-2 focus:ring-compass/40"
+                >
+                  Choose file
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void generate(SAMPLE_DATA_URL)}
+                  className="px-4 py-2 rounded border-hair border-line-strong text-ink text-sm font-display font-semibold hover:bg-ink/5 focus:outline-none focus:ring-2 focus:ring-compass/40"
+                >
+                  Try a live sample
+                </button>
               </div>
-            )}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) void handleFile(file);
+                }}
+              />
+              {status === 'error' && error && (
+                <p className="mt-4 text-sm text-compass" role="alert">
+                  {error}
+                </p>
+              )}
+            </div>
+
+            {/* How it reads, in the drafting voice + the gallery row. */}
+            <div className="flex flex-col gap-6">
+              <ol className="flex flex-col border-hair border-line-default bg-warm-white">
+                {[
+                  ['01', 'Capture', 'Hand Trace any interface screenshot.'],
+                  ['02', 'Detect', 'It maps each element to a catalog component, with a confidence reading.'],
+                  ['03', 'Render', 'A real, editable React component renders live, scored for accessibility.'],
+                ].map(([n, title, desc]) => (
+                  <li key={n} className="flex gap-3.5 px-4 py-3.5 border-t-hair border-line-soft first:border-t-0">
+                    <span className="font-mono text-xs text-ocean tabular-nums pt-0.5">{n}</span>
+                    <div>
+                      <p className="font-display text-sm font-semibold text-ink">{title}</p>
+                      <p className="text-small text-graphite mt-0.5 leading-relaxed">{desc}</p>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+
+              {GALLERY_EXAMPLES.length > 0 && (
+                <div className="border-hair border-line-default bg-warm-white p-4 text-left">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <span className="annotate text-ocean">gallery</span>
+                    <span className="text-[11px] text-muted">pre-traced · no upload or key</span>
+                  </div>
+                  <ul className="mt-3 grid grid-cols-2 gap-2.5 sm:grid-cols-2">
+                    {GALLERY_EXAMPLES.map((example) => (
+                      <li key={example.id}>
+                        <button
+                          type="button"
+                          onClick={() => loadExample(example)}
+                          className="group flex w-full flex-col gap-2 rounded-sm border-hair border-line-default bg-parchment p-2 text-left transition-colors hover:border-compass focus:outline-none focus:ring-2 focus:ring-compass/40"
+                        >
+                          <img
+                            src={example.thumbnail}
+                            alt={`${example.title} example`}
+                            loading="lazy"
+                            className="h-24 w-full rounded-sm border-hair border-line-soft bg-white object-cover object-top"
+                          />
+                          <span className="text-xs font-display font-semibold text-ink group-hover:text-compass">
+                            {example.title}
+                          </span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
         {showWorkspace && status === 'error' && error && (
           <div
-            className="mb-4 flex items-start justify-between gap-3 rounded-xl border border-compass/30 bg-compass/5 px-4 py-3"
+            className="mb-5 flex items-start justify-between gap-3 border-hair border-compass/40 border-l-2 border-l-compass bg-compass/[0.05] px-4 py-3"
             role="alert"
           >
             <div>
-              <p className="text-sm font-display font-semibold text-compass">That didn't work</p>
-              <p className="text-sm text-ink/70 mt-0.5">{error}</p>
-              <p className="text-xs text-ink/50 mt-1">Your generated component is still here. Try again when ready.</p>
+              <span className="annotate text-compass">trace failed</span>
+              <p className="text-sm text-graphite mt-1">{error}</p>
+              <p className="text-xs text-muted mt-1">Your generated component is still here. Try again when ready.</p>
             </div>
             <button
               type="button"
@@ -691,7 +737,7 @@ export function ScreenshotStudio() {
                 setError(null);
                 setStatus('ready');
               }}
-              className="flex-shrink-0 text-xs text-ink/60 hover:text-ink underline focus:outline-none focus:ring-2 focus:ring-compass/40 rounded"
+              className="flex-shrink-0 text-xs text-muted hover:text-ink underline underline-offset-2 focus:outline-none focus:ring-2 focus:ring-compass/40 rounded"
             >
               Dismiss
             </button>
@@ -699,92 +745,47 @@ export function ScreenshotStudio() {
         )}
 
         {showWorkspace && (
-          <div className="grid grid-cols-1 lg:grid-cols-[minmax(280px,360px)_1fr] gap-4">
-            {/* LEFT: What the AI sees */}
-            <aside className="rounded-2xl border border-ink/10 bg-warm-white p-4 flex flex-col gap-4">
-              <div className="flex items-center justify-between">
-                <h2 className="font-display text-base font-semibold text-ink">What the AI sees</h2>
+          <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 xl:grid-cols-[18rem_minmax(0,1fr)_20rem]">
+            {/* ZONE 1 · SOURCE — the input screenshot in a construction-grid frame. */}
+            <aside className="flex flex-col">
+              <div className="flex items-center justify-between mb-2">
+                <span className="annotate text-ocean">source</span>
                 <button
                   type="button"
                   onClick={reset}
-                  className="text-xs text-ink/60 hover:text-ink underline"
+                  className="annotate text-muted hover:text-ink"
                 >
-                  New
+                  + new
                 </button>
               </div>
-
-              {imageUrl && (
-                <img
-                  src={imageUrl}
-                  alt="Uploaded screenshot"
-                  className="rounded-lg border border-ink/10 max-h-40 w-full object-contain bg-parchment"
-                />
-              )}
-
+              <div className="reticle draft-grid-strong border-hair border-line-strong p-3">
+                {imageUrl ? (
+                  <img
+                    src={imageUrl}
+                    alt="Uploaded screenshot"
+                    className="w-full object-contain bg-white border-hair border-line-soft"
+                  />
+                ) : (
+                  <div className="h-32 grid place-items-center text-small text-muted">
+                    No source loaded
+                  </div>
+                )}
+              </div>
               {status === 'loading' && (
-                <div className="flex items-center gap-3 text-ink/70 text-sm">
-                  <div className="w-5 h-5 border-2 border-compass border-t-transparent rounded-full animate-spin" />
-                  Detecting components and generating code…
+                <div className="mt-3 flex items-center gap-2.5 text-graphite text-small">
+                  <div className="w-4 h-4 border-2 border-compass border-t-transparent rounded-full animate-spin" />
+                  Detecting components
                 </div>
-              )}
-
-              {result && (
-                <>
-                  <ul className="flex flex-col gap-3">
-                    {result.detections.map((d, i) => (
-                      <li key={`${d.label}-${i}`} className="rounded-lg bg-parchment p-3">
-                        <div className="flex items-baseline justify-between gap-2">
-                          <span className="text-sm text-ink font-medium">{d.label}</span>
-                          <span className="text-xs font-mono text-compass">
-                            {d.componentName}
-                            {d.variant ? ` · ${d.variant}` : ''}
-                          </span>
-                        </div>
-                        <div className="mt-2">
-                          <ConfidenceBar value={d.confidence} />
-                        </div>
-                      </li>
-                    ))}
-                    {result.detections.length === 0 && (
-                      <li className="text-sm text-ink/50">No components detected.</li>
-                    )}
-                  </ul>
-
-                  {result.componentsUsed.length > 0 && (
-                    <div>
-                      <p className="text-xs uppercase tracking-wide text-ink/50 mb-1">
-                        Components used
-                      </p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {result.componentsUsed.map((c) => (
-                          <span
-                            key={c}
-                            className="px-2 py-0.5 rounded-full bg-compass/10 text-compass text-xs font-mono"
-                          >
-                            {c}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {result.repairs ? (
-                    <p className="text-xs text-ink/50">
-                      Auto-repaired {result.repairs} time{result.repairs === 1 ? '' : 's'} before
-                      compiling.
-                    </p>
-                  ) : null}
-
-                  {result.notes && <p className="text-xs text-ink/60 leading-relaxed">{result.notes}</p>}
-                </>
               )}
             </aside>
 
-            {/* RIGHT: live, editable preview */}
-            <section className="rounded-2xl border border-ink/10 overflow-hidden min-h-[480px] bg-warm-white">
+            {/* ZONE 2 · PREVIEW — the live render, the hero (lg: spans both cols). */}
+            <section className="order-first lg:order-none lg:col-span-2 xl:col-span-1 flex flex-col">
+              <span className="annotate text-ocean mb-2 inline-block">preview · live render</span>
+              <div className="reticle border-hair border-line-strong overflow-hidden min-h-[480px] bg-warm-white">
               {status === 'loading' && !code && (
                 <div className="flex items-center justify-center h-[480px]">
-                  <div className="w-10 h-10 border-4 border-compass border-t-transparent rounded-full animate-spin" />
+                  <div className="w-8 h-8 border-2 border-compass border-t-transparent rounded-full animate-spin" />
                 </div>
               )}
               {code && (
@@ -807,9 +808,9 @@ export function ScreenshotStudio() {
                   customSetup={{ dependencies: { 'lucide-react': 'latest' } }}
                 >
                   {/* Toolbar: view toggle + export actions */}
-                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-ink/10 bg-warm-white px-4 py-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b-hair border-line-default bg-warm-white px-4 py-2">
                     <div
-                      className="inline-flex rounded-lg border border-ink/15 p-0.5"
+                      className="inline-flex rounded-sm border-hair border-line-default p-0.5"
                       role="group"
                       aria-label="Preview view"
                     >
@@ -820,10 +821,10 @@ export function ScreenshotStudio() {
                           onClick={() => setRightView(mode)}
                           aria-pressed={rightView === mode}
                           className={cn(
-                            'px-3 py-1 rounded-md text-xs font-display font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-compass/40',
+                            'px-3 py-1 rounded-[2px] text-xs font-display font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-compass/40',
                             rightView === mode
-                              ? 'bg-compass text-white shadow-sm'
-                              : 'text-ink hover:bg-ink/5',
+                              ? 'bg-compass text-white'
+                              : 'text-graphite hover:bg-ink/5',
                           )}
                         >
                           {mode === 'code' ? 'Code + Preview' : 'Compare'}
@@ -832,7 +833,7 @@ export function ScreenshotStudio() {
                     </div>
                     <div className="flex items-center gap-2">
                       <CopyCodeButton code={code} />
-                      <UnstyledOpenInCodeSandboxButton className="px-3 py-1.5 rounded-lg border border-ink/20 text-ink text-xs font-display font-semibold hover:bg-ink/5 focus:outline-none focus:ring-2 focus:ring-compass/40">
+                      <UnstyledOpenInCodeSandboxButton className="px-3 py-1.5 rounded border-hair border-line-strong text-ink text-xs font-display font-semibold hover:bg-ink/5 focus:outline-none focus:ring-2 focus:ring-compass/40">
                         Open in CodeSandbox
                       </UnstyledOpenInCodeSandboxButton>
                     </div>
@@ -844,7 +845,7 @@ export function ScreenshotStudio() {
                         imageUrl={imageUrl}
                         preview={<SandpackPreview showSandpackErrorOverlay style={{ height: 480 }} />}
                       />
-                      <p className="border-t border-ink/10 bg-warm-white px-4 py-2 text-center text-xs text-ink/50">
+                      <p className="border-t-hair border-line-default bg-warm-white px-4 py-2 text-center text-xs text-muted">
                         Drag the divider. Original screenshot on the left, live render on the right.
                       </p>
                     </>
@@ -858,7 +859,77 @@ export function ScreenshotStudio() {
                   <SandpackErrorWatcher onFix={handleAutoFix} isFixing={isFixing} />
                 </SandpackProvider>
               )}
+              </div>
             </section>
+
+            {/* ZONE 3 · INSPECTOR — what the AI sees: detections, catalog, notes. */}
+            <aside className="flex flex-col">
+              <span className="annotate text-ocean mb-2 inline-block">inspector · what the ai sees</span>
+              <div className="border-hair border-line-strong bg-warm-white">
+                {status === 'loading' && !result && (
+                  <div className="flex items-center gap-2.5 px-4 py-4 text-graphite text-small">
+                    <div className="w-4 h-4 border-2 border-compass border-t-transparent rounded-full animate-spin" />
+                    Reading the screenshot
+                  </div>
+                )}
+
+                {result && (
+                  <>
+                    <ul className="flex flex-col">
+                      {result.detections.map((d, i) => (
+                        <li
+                          key={`${d.label}-${i}`}
+                          className="px-4 py-3 border-t-hair border-line-soft first:border-t-0"
+                        >
+                          <div className="flex items-baseline justify-between gap-2">
+                            <span className="text-sm text-ink font-medium">{d.label}</span>
+                            <span className="text-[11px] font-mono text-compass text-right">
+                              {d.componentName}
+                              {d.variant ? ` · ${d.variant}` : ''}
+                            </span>
+                          </div>
+                          <div className="mt-2">
+                            <ConfidenceBar value={d.confidence} />
+                          </div>
+                        </li>
+                      ))}
+                      {result.detections.length === 0 && (
+                        <li className="px-4 py-3 text-small text-muted">No components detected.</li>
+                      )}
+                    </ul>
+
+                    {result.componentsUsed.length > 0 && (
+                      <div className="px-4 py-3 border-t-hair border-line-default">
+                        <p className="annotate mb-2">catalog</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {result.componentsUsed.map((c) => (
+                            <span
+                              key={c}
+                              className="px-2 py-0.5 rounded-sm border-hair border-ocean/30 bg-ocean/[0.06] text-ocean text-[11px] font-mono"
+                            >
+                              {c}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {(result.repairs || result.notes) && (
+                      <div className="px-4 py-3 border-t-hair border-line-default flex flex-col gap-1.5">
+                        {result.repairs ? (
+                          <p className="text-[11px] text-muted font-mono tabular-nums">
+                            auto-repaired {result.repairs} time{result.repairs === 1 ? '' : 's'} before compiling
+                          </p>
+                        ) : null}
+                        {result.notes && (
+                          <p className="text-xs text-graphite leading-relaxed">{result.notes}</p>
+                        )}
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            </aside>
           </div>
         )}
       </div>

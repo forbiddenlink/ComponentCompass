@@ -3,6 +3,7 @@ import {
   A11Y_CONSOLE_MARKER,
   A11Y_ENTRY_SOURCE,
   A11Y_RUNNER_SOURCE,
+  AXE_CDN_URL,
   computeA11yScore,
   formatA11yViolations,
   normalizeAxeViolations,
@@ -92,9 +93,15 @@ describe('a11y scoring', () => {
   });
 
   describe('A11Y_RUNNER_SOURCE', () => {
-    it('imports axe-core, audits the DOM, and reports via the console marker', () => {
-      expect(A11Y_RUNNER_SOURCE).toContain("import axe from 'axe-core'");
-      expect(A11Y_RUNNER_SOURCE).toContain('axe.run(document.body');
+    it('injects axe from a CDN, audits the DOM, and reports via the console marker', () => {
+      // axe is no longer bundled via customSetup.dependencies; it is injected as a
+      // <script> from a fast CDN and the runner waits for window.axe before running.
+      expect(A11Y_RUNNER_SOURCE).not.toContain("import axe from 'axe-core'");
+      expect(A11Y_RUNNER_SOURCE).toContain(AXE_CDN_URL);
+      expect(A11Y_RUNNER_SOURCE).toContain('trace-axe-cdn');
+      expect(A11Y_RUNNER_SOURCE).toContain('waitForAxe');
+      expect(A11Y_RUNNER_SOURCE).toContain('window.axe');
+      expect(A11Y_RUNNER_SOURCE).toContain('.run(document.body');
       expect(A11Y_RUNNER_SOURCE).toContain(A11Y_CONSOLE_MARKER);
       expect(A11Y_RUNNER_SOURCE).toContain("type: 'trace-a11y'");
     });

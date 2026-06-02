@@ -126,11 +126,6 @@ export function normalizeAxeViolations(raw: unknown): A11yViolation[] {
 }
 
 /**
- * The TS source injected as `/a11y.ts` into the Sandpack files. It dynamically
- * imports axe-core, runs it against the rendered DOM after mount, and posts the
- * trimmed results to the parent window. Self-contained: no app imports.
- */
-/**
  * Marker prefix on a console.log line carrying the a11y payload. Sandpack relays iframe
  * console output to the parent via its client protocol (the same channel
  * SandpackErrorWatcher uses), so we piggyback on console rather than raw postMessage —
@@ -138,33 +133,84 @@ export function normalizeAxeViolations(raw: unknown): A11yViolation[] {
  */
 export const A11Y_CONSOLE_MARKER = '__TRACE_A11Y__';
 
+/** Fast, reliable CDN build of axe-core injected as a <script> into the preview iframe. */
+export const AXE_CDN_URL = 'https://cdn.jsdelivr.net/npm/axe-core@4/axe.min.js';
+
 /**
- * The TS module injected as `/a11y.ts`. Statically imports axe-core (bundled via
- * customSetup.dependencies), audits the rendered DOM after mount, and reports via
- * console.log (Sandpack relays iframe console to the Trace window; a raw postMessage
- * from the sandboxed preview iframe does not reach it).
+ * The TS module injected as `/a11y.ts`. It injects axe-core from a fast CDN as a
+ * <script> into the preview iframe's own <head> (the same pattern the entry uses for
+ * Tailwind), polls until \`window.axe\` exists, runs the audit against the rendered DOM
+ * after mount, and reports via console.log. Sandpack relays iframe console to the Trace
+ * window; a raw postMessage from the sandboxed preview iframe does not reach it.
+ *
+ * Robustness: depending on \`customSetup.dependencies\` to bundle axe-core was slow/flaky
+ * and the client-side timeout fired before axe was ready. Injecting the prebuilt UMD
+ * bundle directly is far faster, and the runner waits for it (polls up to ~10s), retries
+ * the run once on failure, and only emits the "unavailable" error signal after retries.
  */
 export const A11Y_RUNNER_SOURCE = `// Injected by Trace: runs axe-core inside the preview iframe and reports to the Trace app.
-import axe from 'axe-core';
-
 const MARKER = '${A11Y_CONSOLE_MARKER}';
+const AXE_CDN_URL = '${AXE_CDN_URL}';
+
+declare global {
+  interface Window { axe?: { run: (ctx: unknown, opts: unknown) => Promise<{ violations?: unknown[]; passes?: unknown[] }> } }
+}
 
 function report(payload: unknown) {
   try { console.log(MARKER + JSON.stringify(payload)); } catch (e) { /* noop */ }
 }
 
+// Inject the axe-core UMD bundle into the iframe <head> once. Resolves whether or not
+// the script tag has loaded yet; readiness is determined by polling for window.axe.
+function injectAxe(): void {
+  if (document.getElementById('trace-axe-cdn')) return;
+  const s = document.createElement('script');
+  s.id = 'trace-axe-cdn';
+  s.src = AXE_CDN_URL;
+  document.head.appendChild(s);
+}
+
+// Poll every 100ms for up to ~10s for window.axe to be defined.
+function waitForAxe(): Promise<boolean> {
+  return new Promise((resolve) => {
+    const deadline = Date.now() + 10000;
+    const tick = () => {
+      if (window.axe && typeof window.axe.run === 'function') { resolve(true); return; }
+      if (Date.now() >= deadline) { resolve(false); return; }
+      setTimeout(tick, 100);
+    };
+    tick();
+  });
+}
+
+async function audit(): Promise<void> {
+  const results = await window.axe!.run(document.body, {
+    resultTypes: ['violations'],
+    runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'best-practice'] },
+  });
+  const violations = (results.violations || []).map((v: Record<string, unknown>) => ({
+    id: v.id, impact: v.impact || null, help: v.help, helpUrl: v.helpUrl, nodes: v.nodes,
+  }));
+  report({ type: 'trace-a11y', violations, passes: (results.passes || []).length });
+}
+
 async function runTraceA11y() {
+  injectAxe();
+  const ready = await waitForAxe();
+  if (!ready) {
+    report({ type: 'trace-a11y-error', message: 'axe-core failed to load' });
+    return;
+  }
   try {
-    const results = await axe.run(document.body, {
-      resultTypes: ['violations'],
-      runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'best-practice'] },
-    });
-    const violations = (results.violations || []).map((v) => ({
-      id: v.id, impact: v.impact || null, help: v.help, helpUrl: v.helpUrl, nodes: v.nodes,
-    }));
-    report({ type: 'trace-a11y', violations, passes: (results.passes || []).length });
+    await audit();
   } catch (err) {
-    report({ type: 'trace-a11y-error', message: String(err) });
+    // Retry the run once before giving up — axe can transiently throw if the DOM
+    // mutated mid-run.
+    try {
+      await audit();
+    } catch (err2) {
+      report({ type: 'trace-a11y-error', message: String(err2 || err) });
+    }
   }
 }
 

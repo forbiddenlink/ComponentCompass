@@ -1,5 +1,7 @@
-/* Trace — Refined Cartography Aesthetic */
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Epilogue:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+/* Trace — "Precision Drafting" design system.
+   Warm vellum paper, graphite ink, red-pencil vermilion accent, blueprint indigo
+   secondary. Line-work is the motif: hairline rules, faint construction grid. */
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Public+Sans:wght@400;450;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -9,31 +11,33 @@
 
 @layer base {
   :root {
-    /* Backgrounds */
-    --bg-base: #F9F6F0;
-    --bg-elevated: #FFFAF3;
-    --bg-surface: #FFFFFF;
-    
-    /* Text */
-    --text-primary: #2C3E50;
-    --text-secondary: #4E6E58;
-    --text-muted: #7A8B8C;
-    
+    /* Paper / surfaces */
+    --bg-base: #F4F1EA;
+    --bg-elevated: #FBFAF5;
+    --bg-surface: #FBFAF5;
+
+    /* Ink / text (graphite) */
+    --text-primary: #1F2933;
+    --text-secondary: #3A4654;
+    --text-muted: #5A6672;
+
     /* Accents */
-    --accent-primary: #C84B31;
-    --accent-primary-hover: #A63D2A;
-    --accent-ocean: #1A535C;
-    --accent-gold: #D4AF37;
-    
-    /* Semantic */
-    --success: #4E6E58;
-    --warning: #D4AF37;
-    --error: #C84B31;
-    
-    /* Surfaces */
-    --border-subtle: rgba(44, 62, 80, 0.10);
-    --border-default: rgba(44, 62, 80, 0.18);
-    --code-bg: #1A1D23;
+    --accent-primary: #C5482E;       /* red-pencil vermilion */
+    --accent-primary-hover: #A23A23;
+    --accent-blueprint: #27496D;     /* blueprint indigo */
+    --accent-ochre: #9A6B12;
+
+    /* Status */
+    --success: #3C6E47;
+    --warning: #9A6B12;
+    --error: #C5482E;
+
+    /* Construction line-work */
+    --line-strong: rgba(31, 41, 51, 0.22);
+    --line-default: rgba(31, 41, 51, 0.14);
+    --line-soft: rgba(31, 41, 51, 0.10);
+    --line-faint: rgba(31, 41, 51, 0.05);
+    --code-bg: #161C22;
 
     /* Safe-area fallbacks */
     --sat: env(safe-area-inset-top, 0px);
@@ -54,8 +58,9 @@
   }
 
   body {
-    font-family: 'Epilogue', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    background-color: var(--map-parchment);
+    font-family: 'Public Sans', ui-sans-serif, -apple-system, BlinkMacSystemFont, sans-serif;
+    background-color: var(--bg-base);
+    color: var(--text-primary);
     height: 100%;
     min-height: 100vh;
     min-height: 100dvh;
@@ -63,8 +68,7 @@
   }
 
   h1, h2, h3, h4, h5, h6 {
-    font-family: 'Fraunces', serif;
-    font-optical-sizing: auto;
+    font-family: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
   }
 
   code, pre {
@@ -90,42 +94,73 @@
     text-wrap: balance;
   }
 
-  /* Subtle grid pattern - simplified */
-  .topo-background {
+  /* Annotation micro-label: small-caps technical tag with tracking. */
+  .annotate {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.625rem;
+    line-height: 1.2;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  /* Faint blueprint construction grid for the source/canvas frame. */
+  .draft-grid {
     background-image:
       repeating-linear-gradient(
         0deg,
-        transparent,
-        transparent 60px,
-        rgba(44, 62, 80, 0.02) 60px,
-        rgba(44, 62, 80, 0.02) 61px
+        transparent, transparent 23px,
+        var(--line-faint) 23px, var(--line-faint) 24px
       ),
       repeating-linear-gradient(
         90deg,
-        transparent,
-        transparent 60px,
-        rgba(44, 62, 80, 0.02) 60px,
-        rgba(44, 62, 80, 0.02) 61px
+        transparent, transparent 23px,
+        var(--line-faint) 23px, var(--line-faint) 24px
       );
   }
 
-  /* Compass Animation */
-  .compass-spin {
-    animation: compass-rotate 20s linear infinite;
+  /* Stronger blueprint grid (used behind the SOURCE screenshot frame). */
+  .draft-grid-strong {
+    background-color: var(--bg-base);
+    background-image:
+      repeating-linear-gradient(
+        0deg,
+        transparent, transparent 15px,
+        var(--line-soft) 15px, var(--line-soft) 16px
+      ),
+      repeating-linear-gradient(
+        90deg,
+        transparent, transparent 15px,
+        var(--line-soft) 15px, var(--line-soft) 16px
+      );
   }
 
-  @keyframes compass-rotate {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-  }
+  /* Hairline rule helpers. */
+  .rule-x { border-bottom: 0.5px solid var(--line-default); }
+  .rule-y { border-right: 0.5px solid var(--line-default); }
 
-  /* Wax Seal Effect - refined */
-  .wax-seal {
+  /* Corner reticle ticks for framed surfaces (drawn via ::before/::after below). */
+  .reticle {
     position: relative;
-    background: radial-gradient(circle at 40% 40%, var(--accent-primary) 0%, #A63D2A 100%);
-    box-shadow:
-      inset 0 -2px 4px rgba(0, 0, 0, 0.25),
-      0 2px 6px rgba(200, 75, 49, 0.35);
+  }
+  .reticle::before,
+  .reticle::after {
+    content: '';
+    position: absolute;
+    width: 9px;
+    height: 9px;
+    pointer-events: none;
+  }
+  .reticle::before {
+    top: -1px; left: -1px;
+    border-top: 1px solid var(--accent-blueprint);
+    border-left: 1px solid var(--accent-blueprint);
+  }
+  .reticle::after {
+    bottom: -1px; right: -1px;
+    border-bottom: 1px solid var(--accent-blueprint);
+    border-right: 1px solid var(--accent-blueprint);
   }
 
   /* Typing dots */
@@ -135,14 +170,9 @@
   }
 
   /* Safe-area padding helpers */
-  .safe-pb {
-    padding-bottom: env(safe-area-inset-bottom, 0px);
-  }
+  .safe-pb { padding-bottom: env(safe-area-inset-bottom, 0px); }
+  .safe-pt { padding-top: env(safe-area-inset-top, 0px); }
 
-  .safe-pt {
-    padding-top: env(safe-area-inset-top, 0px);
-  }
-  
   /* Focus ring utility */
   .focus-ring {
     @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-compass focus-visible:ring-offset-2 focus-visible:ring-offset-parchment;
@@ -176,33 +206,13 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
-.animate-in {
-  animation: slideIn 0.2s ease-out;
-}
-
-.fade-in {
-  animation: fadeIn 0.3s ease-out;
-}
-
-.slide-in-from-bottom-2 {
-  animation: slideInFromBottom 0.2s ease-out;
-}
-
-.slide-in-from-bottom-4 {
-  animation: slideInFromBottom 0.25s ease-out;
-}
-
-.slide-in-from-right-4 {
-  animation: slideInFromRight 0.2s ease-out;
-}
-
-.slide-in-from-top-2 {
-  animation: slideInFromTop 0.2s ease-out;
-}
-
-.slide-in-from-left-2 {
-  animation: slideIn 0.2s ease-out;
-}
+.animate-in { animation: slideIn 0.2s ease-out; }
+.fade-in { animation: fadeIn 0.3s ease-out; }
+.slide-in-from-bottom-2 { animation: slideInFromBottom 0.2s ease-out; }
+.slide-in-from-bottom-4 { animation: slideInFromBottom 0.25s ease-out; }
+.slide-in-from-right-4 { animation: slideInFromRight 0.2s ease-out; }
+.slide-in-from-top-2 { animation: slideInFromTop 0.2s ease-out; }
+.slide-in-from-left-2 { animation: slideIn 0.2s ease-out; }
 
 /* Reduced motion support */
 @media (prefers-reduced-motion: reduce) {
@@ -216,7 +226,7 @@
   }
 }
 
-/* ─── Scrollbar ───────────────────────────────────── */
+/* ─── Scrollbar (hairline, graphite) ──────────────── */
 
 ::-webkit-scrollbar {
   width: 8px;
@@ -231,24 +241,23 @@
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(44, 62, 80, 0.05);
-  border-left: 1px solid rgba(44, 62, 80, 0.1);
+  background: var(--line-faint);
+  border-left: 0.5px solid var(--line-soft);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, var(--compass-rose) 0%, #A63D2A 100%);
-  border-radius: 2px;
-  border: 2px solid var(--map-parchment);
+  background: var(--line-default);
+  border-radius: 1px;
+  border: 2px solid var(--bg-base);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, #D85740 0%, var(--compass-rose) 100%);
+  background: var(--line-strong);
 }
 
-/* Firefox scrollbar */
 @supports (scrollbar-color: auto) {
   * {
-    scrollbar-color: var(--compass-rose) rgba(44, 62, 80, 0.05);
+    scrollbar-color: var(--line-default) var(--line-faint);
     scrollbar-width: thin;
   }
 }
@@ -256,17 +265,13 @@
 /* ─── Selection ───────────────────────────────────── */
 
 ::selection {
-  background: var(--gold-accent);
-  color: var(--map-ink);
+  background: rgba(197, 72, 46, 0.18);
+  color: var(--text-primary);
 }
 
 /* ─── Forced Colors / High Contrast ─────────────── */
 
 @media (forced-colors: active) {
-  .wax-seal {
-    border: 2px solid ButtonText;
-  }
-
   .focus-ring:focus-visible {
     outline: 2px solid Highlight;
     outline-offset: 2px;
