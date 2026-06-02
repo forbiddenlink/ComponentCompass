@@ -3,8 +3,12 @@ import { generateFromScreenshot } from './_lib/generate';
 
 /**
  * POST /api/generate
- * Body: { imageDataUrl: string }  (a data:<mime>;base64,<payload> URL)
- * Returns: GenResult JSON ({ detections, jsx, componentsUsed, notes }).
+ * Body: {
+ *   imageDataUrl: string,          // a data:<mime>;base64,<payload> URL
+ *   previousJsx?: string,          // optional: prior jsx that failed at runtime (targeted repair)
+ *   errorMessage?: string,         // optional: the runtime/compile error for previousJsx
+ * }
+ * Returns: GenResult JSON ({ detections, jsx, componentsUsed, notes, repairs }).
  */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'OPTIONS') {
@@ -22,13 +26,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(503).json({ error: 'Google Generative AI API key not configured on server' });
   }
 
-  const { imageDataUrl } = req.body ?? {};
+  const { imageDataUrl, previousJsx, errorMessage } = req.body ?? {};
   if (!imageDataUrl || typeof imageDataUrl !== 'string') {
     return res.status(400).json({ error: 'imageDataUrl is required' });
   }
 
+  const repair =
+    typeof previousJsx === 'string' && typeof errorMessage === 'string'
+      ? { previousJsx, errorMessage }
+      : undefined;
+
   try {
-    const result = await generateFromScreenshot(imageDataUrl);
+    const result = await generateFromScreenshot(imageDataUrl, repair);
     res.setHeader('Access-Control-Allow-Origin', '*');
     return res.status(200).json(result);
   } catch (error) {

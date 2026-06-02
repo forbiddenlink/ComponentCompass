@@ -1,5 +1,6 @@
 import { lazy, Suspense, useState } from 'react';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { hasAlgolia } from './lib/env';
 import { cn } from './lib/utils';
 
 // Lazy load the main views for faster initial load
@@ -9,9 +10,13 @@ const ScreenshotStudio = lazy(() => import('./components/ScreenshotStudio').then
 
 type View = 'studio' | 'chat' | 'explore';
 
+// Chat is powered by Algolia. Only offer it when Algolia creds are present;
+// Studio (Google key) and Explore (static catalog) always work.
+const ALGOLIA_AVAILABLE = hasAlgolia();
+
 const TABS: { id: View; label: string }[] = [
   { id: 'studio', label: 'Studio' },
-  { id: 'chat', label: 'Chat' },
+  ...(ALGOLIA_AVAILABLE ? [{ id: 'chat' as const, label: 'Chat' }] : []),
   { id: 'explore', label: 'Explore' },
 ];
 

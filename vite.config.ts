@@ -32,15 +32,19 @@ function devApiPlugin(): PluginOption {
           const chunks: Buffer[] = []
           for await (const chunk of req) chunks.push(chunk as Buffer)
           const body = JSON.parse(Buffer.concat(chunks).toString('utf-8') || '{}')
-          const { imageDataUrl } = body
+          const { imageDataUrl, previousJsx, errorMessage } = body
           if (!imageDataUrl || typeof imageDataUrl !== 'string') {
             res.statusCode = 400
             res.setHeader('Content-Type', 'application/json')
             res.end(JSON.stringify({ error: 'imageDataUrl is required' }))
             return
           }
+          const repair =
+            typeof previousJsx === 'string' && typeof errorMessage === 'string'
+              ? { previousJsx, errorMessage }
+              : undefined
           const mod = await server.ssrLoadModule('/api/_lib/generate.ts')
-          const result = await mod.generateFromScreenshot(imageDataUrl)
+          const result = await mod.generateFromScreenshot(imageDataUrl, repair)
           res.statusCode = 200
           res.setHeader('Content-Type', 'application/json')
           res.end(JSON.stringify(result))

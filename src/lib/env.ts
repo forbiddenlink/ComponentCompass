@@ -16,42 +16,38 @@ class EnvValidationError extends Error {
   }
 }
 
-function validateEnv(): EnvConfig {
-  const requiredVars = [
-    'VITE_ALGOLIA_APP_ID',
-    'VITE_ALGOLIA_SEARCH_API_KEY',
-    'VITE_ALGOLIA_AGENT_ID',
-  ] as const;
+const ALGOLIA_VARS = [
+  'VITE_ALGOLIA_APP_ID',
+  'VITE_ALGOLIA_SEARCH_API_KEY',
+  'VITE_ALGOLIA_AGENT_ID',
+] as const;
 
-  const missing: string[] = [];
-  const empty: string[] = [];
-
-  for (const varName of requiredVars) {
+/**
+ * Whether all Algolia credentials are present and non-empty.
+ *
+ * Algolia powers ONLY the Chat tab. It is optional: the Screenshot Studio (Google key)
+ * and Explore (static catalog JSON) views work without it, so we never throw on absence.
+ */
+export function hasAlgolia(): boolean {
+  return ALGOLIA_VARS.every((varName) => {
     const value = import.meta.env[varName];
-    if (value === undefined) {
-      missing.push(varName);
-    } else if (value === '') {
-      empty.push(varName);
-    }
-  }
+    return typeof value === 'string' && value !== '';
+  });
+}
 
-  if (missing.length > 0 || empty.length > 0) {
-    const errorMessages: string[] = ['Environment variable validation failed:'];
-
-    if (missing.length > 0) {
-      errorMessages.push(`\nMissing variables:\n  ${missing.join('\n  ')}`);
-    }
-
-    if (empty.length > 0) {
-      errorMessages.push(`\nEmpty variables:\n  ${empty.join('\n  ')}`);
-    }
-
-    errorMessages.push('\nTo fix this:');
-    errorMessages.push('1. Copy .env.example to .env');
-    errorMessages.push('2. Fill in your Algolia credentials from https://dashboard.algolia.com/');
-    errorMessages.push('3. Restart the development server');
-
-    throw new EnvValidationError(errorMessages.join('\n'));
+/**
+ * Read the validated Algolia config. Only call this once {@link hasAlgolia} is true
+ * (e.g. from the lazily-loaded Chat surface). Throws if creds are missing so misuse
+ * is caught loudly rather than producing a broken Algolia client.
+ */
+function validateEnv(): EnvConfig {
+  if (!hasAlgolia()) {
+    throw new EnvValidationError(
+      'Algolia credentials are not configured. The Chat tab requires VITE_ALGOLIA_APP_ID, ' +
+        'VITE_ALGOLIA_SEARCH_API_KEY, and VITE_ALGOLIA_AGENT_ID. ' +
+        'Copy .env.example to .env and fill them in from https://dashboard.algolia.com/, ' +
+        'then restart the dev server. (Studio and Explore work without these.)',
+    );
   }
 
   return {
@@ -64,8 +60,8 @@ function validateEnv(): EnvConfig {
 let _env: EnvConfig | null = null;
 
 /**
- * Get validated environment variables
- * Throws EnvValidationError if required variables are missing
+ * Get validated Algolia environment variables.
+ * Throws EnvValidationError if Algolia creds are missing — gate calls behind {@link hasAlgolia}.
  */
 export function getEnv(): EnvConfig {
   if (_env === null) {

@@ -4,6 +4,7 @@ import {
   SandpackLayout,
   SandpackPreview,
   SandpackCodeEditor,
+  useSandpack,
 } from '@codesandbox/sandpack-react';
 import { cn } from '../lib/utils';
 import { imageToBase64 } from '../services/vision';
@@ -20,6 +21,7 @@ interface GenResult {
   jsx: string;
   componentsUsed: string[];
   notes: string;
+  repairs?: number;
 }
 
 type Status = 'idle' | 'loading' | 'ready' | 'error';
@@ -56,6 +58,56 @@ function ConfidenceBar({ value }: { value: number }) {
   );
 }
 
+/**
+ * Invisible child of SandpackProvider that listens for Sandpack compile/runtime errors
+ * and surfaces an "Ask Trace to fix it" affordance that triggers a targeted repair.
+ */
+function SandpackErrorWatcher({
+  onFix,
+  isFixing,
+}: {
+  onFix: (errorMessage: string) => void;
+  isFixing: boolean;
+}) {
+  const { listen } = useSandpack();
+  const [runtimeError, setRuntimeError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const unsubscribe = listen((msg) => {
+      // Sandpack emits action:'show-error' (compile/transform) and
+      // type:'action' with action:'show-error', plus 'console' error events.
+      if (msg.type === 'action' && msg.action === 'show-error') {
+        const message = [msg.title, msg.message].filter(Boolean).join(': ');
+        setRuntimeError(message || 'The generated code threw a runtime error.');
+      } else if (msg.type === 'success' || msg.type === 'start') {
+        // A successful (re)compile clears the prior error banner.
+        setRuntimeError(null);
+      }
+    });
+    return unsubscribe;
+  }, [listen]);
+
+  if (!runtimeError) return null;
+
+  return (
+    <div
+      className="flex flex-col gap-2 border-t border-compass/30 bg-compass/5 px-4 py-3"
+      role="alert"
+    >
+      <p className="text-sm font-medium text-compass">Preview error</p>
+      <p className="text-xs font-mono text-ink/70 line-clamp-3 whitespace-pre-wrap">{runtimeError}</p>
+      <button
+        type="button"
+        disabled={isFixing}
+        onClick={() => onFix(runtimeError)}
+        className="self-start px-3 py-1.5 rounded-lg bg-compass text-white text-xs font-display font-semibold shadow-sm hover:bg-compass/90 focus:outline-none focus:ring-2 focus:ring-compass/40 disabled:opacity-60"
+      >
+        {isFixing ? 'Tracing the fix…' : 'Ask Trace to fix it'}
+      </button>
+    </div>
+  );
+}
+
 export function ScreenshotStudio() {
   const [status, setStatus] = useState<Status>('idle');
   const [error, setError] = useState<string | null>(null);
@@ -63,32 +115,50 @@ export function ScreenshotStudio() {
   const [result, setResult] = useState<GenResult | null>(null);
   const [code, setCode] = useState<string>('');
   const [isDragging, setIsDragging] = useState(false);
+  const [isFixing, setIsFixing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const generate = useCallback(async (dataUrl: string) => {
-    setStatus('loading');
-    setError(null);
-    setResult(null);
-    setImageUrl(dataUrl);
-    try {
-      const res = await fetch('/api/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ imageDataUrl: dataUrl }),
-      });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({ error: 'Generation failed' }));
-        throw new Error(body.error || `Generation API error (${res.status})`);
+  const generate = useCallback(
+    async (dataUrl: string, repair?: { previousJsx: string; errorMessage: string }) => {
+      setStatus('loading');
+      setError(null);
+      setResult(null);
+      setImageUrl(dataUrl);
+      try {
+        const res = await fetch('/api/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ imageDataUrl: dataUrl, ...repair }),
+        });
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({ error: 'Generation failed' }));
+          throw new Error(body.error || `Generation API error (${res.status})`);
+        }
+        const data: GenResult = await res.json();
+        setResult(data);
+        setCode(data.jsx);
+        setStatus('ready');
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Generation failed');
+        setStatus('error');
       }
-      const data: GenResult = await res.json();
-      setResult(data);
-      setCode(data.jsx);
-      setStatus('ready');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Generation failed');
-      setStatus('error');
-    }
-  }, []);
+    },
+    [],
+  );
+
+  /** Runtime repair: re-POST the current image + broken jsx + the Sandpack error. */
+  const handleAutoFix = useCallback(
+    async (errorMessage: string) => {
+      if (!imageUrl || !code) return;
+      setIsFixing(true);
+      try {
+        await generate(imageUrl, { previousJsx: code, errorMessage });
+      } finally {
+        setIsFixing(false);
+      }
+    },
+    [imageUrl, code, generate],
+  );
 
   const handleFile = useCallback(
     async (file: File) => {
@@ -272,6 +342,13 @@ export function ScreenshotStudio() {
                     </div>
                   )}
 
+                  {result.repairs ? (
+                    <p className="text-xs text-ink/50">
+                      Auto-repaired {result.repairs} time{result.repairs === 1 ? '' : 's'} before
+                      compiling.
+                    </p>
+                  ) : null}
+
                   {result.notes && <p className="text-xs text-ink/60 leading-relaxed">{result.notes}</p>}
                 </>
               )}
@@ -295,6 +372,7 @@ export function ScreenshotStudio() {
                     <SandpackPreview showSandpackErrorOverlay style={{ height: 480 }} />
                     <SandpackCodeEditor showLineNumbers style={{ height: 480 }} />
                   </SandpackLayout>
+                  <SandpackErrorWatcher onFix={handleAutoFix} isFixing={isFixing} />
                 </SandpackProvider>
               )}
             </section>

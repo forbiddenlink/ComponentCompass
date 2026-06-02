@@ -9,6 +9,7 @@
  */
 import { google } from '@ai-sdk/google';
 import { generateObject } from 'ai';
+import { transform } from 'esbuild';
 import { z } from 'zod';
 import catalog from '../../data/components_index_enhanced.json' with { type: 'json' };
 
@@ -36,6 +37,16 @@ export interface GenResult {
   jsx: string;
   componentsUsed: string[];
   notes: string;
+  /** How many repair iterations the server ran to make the jsx compile (0 = first attempt passed). */
+  repairs: number;
+}
+
+/** Optional targeted-repair context passed from the client when generated code fails at runtime. */
+export interface RepairContext {
+  /** The previously generated jsx that failed. */
+  previousJsx?: string;
+  /** The compile/runtime error message captured for the previous jsx. */
+  errorMessage?: string;
 }
 
 const detectionSchema = z.object({
@@ -116,6 +127,44 @@ Put the catalog names you leaned on in "componentsUsed", and a short rationale i
 CATALOG WHITELIST (recreate using these patterns/variants where possible):
 ${buildCatalogPrompt()}`;
 
+/** Build the targeted-repair instruction appended to the base prompt on a repair pass. */
+function buildRepairPrompt(previousJsx: string, errorMessage: string): string {
+  return `${PROMPT}
+
+REPAIR PASS: The previous attempt below FAILED to compile with this error:
+---ERROR---
+${errorMessage}
+---END ERROR---
+
+Previous (broken) App.tsx:
+---CODE---
+${previousJsx}
+---END CODE---
+
+Return CORRECTED, self-contained App.tsx in the "jsx" field, obeying ALL the rules above
+(only react + lucide-react imports, Tailwind classes, default-exported \`App\`). Fix the cause
+of the error; do not reintroduce it.`;
+}
+
+/**
+ * Try to compile-check jsx via esbuild's tsx loader.
+ * @returns null on success, or the error message string on failure.
+ */
+async function parseCheck(jsx: string): Promise<string | null> {
+  try {
+    await transform(jsx, { loader: 'tsx' });
+    return null;
+  } catch (err) {
+    if (err && typeof err === 'object' && 'errors' in err) {
+      const errors = (err as { errors?: Array<{ text?: string }> }).errors;
+      if (Array.isArray(errors) && errors.length > 0) {
+        return errors.map((e) => e.text ?? '').filter(Boolean).join('; ') || 'Unknown compile error';
+      }
+    }
+    return err instanceof Error ? err.message : 'Unknown compile error';
+  }
+}
+
 /** Parse a base64 data URL into mime type + raw base64 payload. */
 function parseDataUrl(dataUrl: string): { mimeType: string; data: string } | null {
   const match = /^data:([^;]+);base64,(.+)$/s.exec(dataUrl);
@@ -132,13 +181,25 @@ function stripCodeFences(text: string): string {
     .trim();
 }
 
+/** Max number of REPAIR iterations after the initial generation. */
+const MAX_REPAIRS = 2;
+
 /**
  * Generate a self-contained React component + detection report from a screenshot.
  *
+ * After each generation the returned `jsx` is compile-checked with esbuild. If it fails,
+ * up to {@link MAX_REPAIRS} repair passes are run, feeding the broken code + error back to
+ * the model. Returns the first jsx that compiles; if all attempts fail, returns the last
+ * attempt with a warning appended to `notes`.
+ *
  * @param imageDataUrl A base64 data URL: `data:<mime>;base64,<payload>`.
+ * @param repair Optional targeted-repair context (previous jsx + error) from a client runtime failure.
  * @throws if the API key is missing or the input is not a valid data URL.
  */
-export async function generateFromScreenshot(imageDataUrl: string): Promise<GenResult> {
+export async function generateFromScreenshot(
+  imageDataUrl: string,
+  repair?: RepairContext,
+): Promise<GenResult> {
   if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
     throw new Error('GOOGLE_GENERATIVE_AI_API_KEY is not configured on the server');
   }
@@ -149,29 +210,61 @@ export async function generateFromScreenshot(imageDataUrl: string): Promise<GenR
   }
 
   const modelId = process.env.GEMINI_MODEL ?? 'gemini-2.5-flash';
+  const image = Uint8Array.from(Buffer.from(parsed.data, 'base64'));
+  const mediaType = parsed.mimeType;
 
-  const { object } = await generateObject({
-    model: google(modelId),
-    schema: genSchema,
-    temperature: 0.2,
-    messages: [
-      {
-        role: 'user',
-        content: [
-          { type: 'text', text: PROMPT },
-          // Pass raw bytes + mediaType so the SDK does not try to fetch the data: URL.
-          {
-            type: 'image',
-            image: Uint8Array.from(Buffer.from(parsed.data, 'base64')),
-            mediaType: parsed.mimeType,
-          },
-        ],
-      },
-    ],
-  });
+  /** One generation call. `repairPrompt` is used for repair passes; otherwise the base PROMPT. */
+  async function runGeneration(repairPrompt?: string): Promise<z.infer<typeof genSchema>> {
+    const { object } = await generateObject({
+      model: google(modelId),
+      schema: genSchema,
+      temperature: 0.2,
+      messages: [
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: repairPrompt ?? PROMPT },
+            // Pass raw bytes + mediaType so the SDK does not try to fetch the data: URL.
+            { type: 'image', image, mediaType },
+          ],
+        },
+      ],
+    });
+    return object;
+  }
+
+  // Seed: if the client sent a targeted-repair context, start from a repair pass;
+  // otherwise do a fresh generation.
+  let result: z.infer<typeof genSchema>;
+  let repairs = 0;
+  if (repair?.previousJsx && repair.errorMessage) {
+    result = await runGeneration(buildRepairPrompt(repair.previousJsx, repair.errorMessage));
+    repairs = 1;
+  } else {
+    result = await runGeneration();
+  }
+
+  let jsx = stripCodeFences(result.jsx);
+  let lastError = await parseCheck(jsx);
+
+  // Repair loop: keep going until it compiles or we hit the cap.
+  while (lastError !== null && repairs < MAX_REPAIRS) {
+    repairs += 1;
+    const repaired = await runGeneration(buildRepairPrompt(jsx, lastError));
+    result = repaired;
+    jsx = stripCodeFences(repaired.jsx);
+    lastError = await parseCheck(jsx);
+  }
+
+  const notes =
+    lastError === null
+      ? result.notes
+      : `${result.notes}\n\n⚠️ Auto-repair could not produce compiling code after ${repairs} attempt(s). Last error: ${lastError}`;
 
   return {
-    ...object,
-    jsx: stripCodeFences(object.jsx),
+    ...result,
+    jsx,
+    notes,
+    repairs,
   };
 }
