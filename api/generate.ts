@@ -290,6 +290,26 @@ function parseDataUrl(dataUrl: string): { mimeType: string; data: string } | nul
   return { mimeType: match[1], data: match[2] };
 }
 
+/** Image MIME types the pipeline accepts. Anything else is rejected before calling Gemini. */
+const ALLOWED_IMAGE_MIME = /^image\/(png|jpeg|jpg|webp|gif)$/i;
+
+/**
+ * Max accepted size of the decoded image (in bytes). Bounds request cost/latency.
+ * ~4MB of raw image data; base64 is ~33% larger on the wire.
+ */
+const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
+
+/** Cap on model output tokens per generateObject call, to bound cost. */
+const MAX_OUTPUT_TOKENS = 4000;
+
+/** Approximate decoded byte length of a base64 string without allocating a Buffer. */
+function approxBase64Bytes(base64: string): number {
+  // 4 base64 chars encode 3 bytes; subtract padding.
+  const len = base64.length;
+  const padding = base64.endsWith('==') ? 2 : base64.endsWith('=') ? 1 : 0;
+  return Math.floor((len * 3) / 4) - padding;
+}
+
 /** Strip stray ```tsx / ```jsx / ``` fences a model may wrap code in. */
 function stripCodeFences(text: string): string {
   return text
@@ -327,6 +347,16 @@ export async function generateFromScreenshot(
     throw new Error('imageDataUrl must be a base64 data URL (data:<mime>;base64,...)');
   }
 
+  // MIME guard: only accept supported raster image types before spending a Gemini call.
+  if (!ALLOWED_IMAGE_MIME.test(parsed.mimeType)) {
+    throw new Error('Unsupported image type. Please use a PNG, JPEG, WebP, or GIF.');
+  }
+
+  // Size guard: bound decoded image size before allocating a Buffer / calling Gemini.
+  if (approxBase64Bytes(parsed.data) > MAX_IMAGE_BYTES) {
+    throw new Error('That image is too large. Please try one under 4 MB.');
+  }
+
   const modelId = process.env.GEMINI_MODEL ?? 'gemini-2.5-flash';
   const image = Uint8Array.from(Buffer.from(parsed.data, 'base64'));
   const mediaType = parsed.mimeType;
@@ -337,6 +367,7 @@ export async function generateFromScreenshot(
       model: google(modelId),
       schema: genSchema,
       temperature: 0.2,
+      maxOutputTokens: MAX_OUTPUT_TOKENS,
       messages: [
         {
           role: 'user',
@@ -407,6 +438,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(204).end();
   }
 
+  // Kill switch: lets an operator disable the public paid endpoint without a redeploy.
+  if (process.env.TRACE_DISABLED === '1') {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    return res.status(503).json({ error: 'Trace is temporarily unavailable' });
+  }
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -418,6 +455,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const { imageDataUrl, previousJsx, errorMessage, repairReason } = req.body ?? {};
   if (!imageDataUrl || typeof imageDataUrl !== 'string') {
     return res.status(400).json({ error: 'imageDataUrl is required' });
+  }
+
+  // Body-size guard: reject oversized image payloads before any Gemini work. The
+  // base64 string is ~33% larger than the decoded image, so allow headroom over
+  // the 4MB decoded cap and let generateFromScreenshot do the exact decoded check.
+  if (imageDataUrl.length > Math.ceil((MAX_IMAGE_BYTES * 4) / 3) + 1024) {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    return res.status(413).json({ error: 'That image is too large. Please try one under 4 MB.' });
   }
 
   const repair =
@@ -435,10 +480,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(200).json(result);
   } catch (error) {
     const detail = error instanceof Error ? error.message : 'Generation failed';
+    res.setHeader('Access-Control-Allow-Origin', '*');
     // Input-validation errors are safe to return. Anything else may contain
     // provider internals (including secrets echoed in request headers), so log
     // it server-side only and return a generic message to the client.
-    if (detail.includes('data URL')) {
+    if (detail.includes('too large')) {
+      return res.status(413).json({ error: detail });
+    }
+    if (detail.includes('data URL') || detail.includes('Unsupported image type')) {
       return res.status(400).json({ error: detail });
     }
     console.error('[api/generate] generation failed:', detail);

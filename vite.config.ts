@@ -22,6 +22,13 @@ function devApiPlugin(): PluginOption {
           res.end()
           return
         }
+        // Kill switch parity with the production handler.
+        if (process.env.TRACE_DISABLED === '1') {
+          res.statusCode = 503
+          res.setHeader('Content-Type', 'application/json')
+          res.end(JSON.stringify({ error: 'Trace is temporarily unavailable' }))
+          return
+        }
         if (req.method !== 'POST') {
           res.statusCode = 405
           res.setHeader('Content-Type', 'application/json')
@@ -39,6 +46,13 @@ function devApiPlugin(): PluginOption {
             res.end(JSON.stringify({ error: 'imageDataUrl is required' }))
             return
           }
+          // Body-size guard parity (~4MB decoded, base64 ~33% larger).
+          if (imageDataUrl.length > Math.ceil((4 * 1024 * 1024 * 4) / 3) + 1024) {
+            res.statusCode = 413
+            res.setHeader('Content-Type', 'application/json')
+            res.end(JSON.stringify({ error: 'That image is too large. Please try one under 4 MB.' }))
+            return
+          }
           const repair =
             typeof previousJsx === 'string' && typeof errorMessage === 'string'
               ? {
@@ -54,7 +68,11 @@ function devApiPlugin(): PluginOption {
           res.end(JSON.stringify(result))
         } catch (error) {
           const message = error instanceof Error ? error.message : 'Generation failed'
-          res.statusCode = message.includes('data URL') ? 400 : 500
+          res.statusCode = message.includes('too large')
+            ? 413
+            : message.includes('data URL') || message.includes('Unsupported image type')
+              ? 400
+              : 500
           res.setHeader('Content-Type', 'application/json')
           res.end(JSON.stringify({ error: message }))
         }

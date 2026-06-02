@@ -58,6 +58,37 @@ const SAMPLE_DATA_URL =
     </svg>`,
   );
 
+/**
+ * Map an HTTP status (and optional safe backend hint) to friendly, user-facing copy.
+ * Never returns raw provider/internal error text in the empty state path.
+ */
+function friendlyError(status: number, backendMessage: string): string {
+  // The only backend strings safe to show verbatim are our own input-validation
+  // messages (data URL / image too large / unsupported type). Everything else is
+  // mapped to a generic friendly line so provider internals never reach the UI.
+  const safe = /data url|too large|image type|unsupported|temporarily unavailable/i.test(
+    backendMessage,
+  );
+  if (safe && backendMessage) return backendMessage;
+  if (status === 413) return 'That image is too large. Please try one under 4 MB.';
+  if (status === 503) return 'Trace is temporarily unavailable. Please try again in a moment.';
+  if (status === 429) return 'Too many requests right now. Please wait a moment and try again.';
+  return 'Something went wrong while tracing this screenshot. Please try again.';
+}
+
+/** Fetch an image URL (e.g. a gallery example PNG) and convert it to a base64 data URL. */
+async function fetchImageAsDataUrl(url: string): Promise<string> {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Could not load example image (${res.status})`);
+  const blob = await res.blob();
+  return await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
 function ConfidenceBar({ value }: { value: number }) {
   const pct = Math.round(Math.max(0, Math.min(1, value)) * 100);
   return (
@@ -176,11 +207,13 @@ function A11yScore({
       }
     });
 
-    // If nothing arrives, axe failed to load/run — don't hang. Allow time for the
-    // CDN axe build to load inside the iframe + the post-mount delay.
+    // If nothing arrives, axe failed to load/run — don't hang. The in-iframe runner
+    // injects axe from a CDN and polls up to ~10s for it, plus the post-mount delay and
+    // a one-shot retry, so give it 15s before declaring the check unavailable. Keyed to
+    // `jsx`, so this timer resets on every new generation.
     const timeout = window.setTimeout(() => {
       if (!settled) setState({ phase: 'unavailable' });
-    }, 8000);
+    }, 15000);
 
     return () => {
       unsubscribe();
@@ -232,7 +265,7 @@ function A11yScore({
             <span className="text-sm font-medium text-ink">Accessibility score</span>
             <span
               className="text-xs text-ink/50"
-              title="Automated check via axe-core. Catches roughly half of WCAG issues — not a certification."
+              title="Automated check via axe-core. Catches roughly half of WCAG issues, not a certification."
             >
               automated check (axe-core){' '}
               <abbr title="axe-core catches ~57% of WCAG issues automatically. This is a directional signal, not a WCAG certification.">
@@ -382,10 +415,15 @@ export function ScreenshotStudio() {
       dataUrl: string,
       repair?: { previousJsx: string; errorMessage: string; repairReason?: 'compile' | 'a11y' },
     ) => {
+      // A repair runs on top of an existing result: keep the prior result/code on
+      // screen (non-destructive) so a transient failure never wipes the user's work.
+      const isRepair = Boolean(repair);
       setStatus('loading');
       setError(null);
-      setResult(null);
-      setImageUrl(dataUrl);
+      if (!isRepair) {
+        setResult(null);
+        setImageUrl(dataUrl);
+      }
       try {
         const res = await fetch('/api/generate', {
           method: 'POST',
@@ -393,15 +431,22 @@ export function ScreenshotStudio() {
           body: JSON.stringify({ imageDataUrl: dataUrl, ...repair }),
         });
         if (!res.ok) {
-          const body = await res.json().catch(() => ({ error: 'Generation failed' }));
-          throw new Error(body.error || `Generation API error (${res.status})`);
+          const body = await res.json().catch(() => ({ error: '' }));
+          // Never surface raw backend strings; map to friendly copy by status.
+          throw new Error(friendlyError(res.status, typeof body?.error === 'string' ? body.error : ''));
         }
         const data: GenResult = await res.json();
         setResult(data);
         setCode(data.jsx);
         setStatus('ready');
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Generation failed');
+        // Friendly copy only. If a result already exists, keep it visible and show a
+        // dismissible banner instead of dumping the user back to the empty dropzone.
+        const message =
+          err instanceof Error && err.message
+            ? err.message
+            : 'Something went wrong while tracing this screenshot. Please try again.';
+        setError(message);
         setStatus('error');
       }
     },
@@ -415,6 +460,7 @@ export function ScreenshotStudio() {
    */
   const loadExample = useCallback((example: (typeof GALLERY_EXAMPLES)[number]) => {
     setError(null);
+    // Show the thumbnail immediately for a snappy load.
     setImageUrl(example.thumbnail);
     setResult({
       detections: example.result.detections,
@@ -426,6 +472,14 @@ export function ScreenshotStudio() {
     setCode(example.result.jsx);
     setRightView('code');
     setStatus('ready');
+    // Convert the example PNG to a base64 data URL so "Fix accessibility" and runtime
+    // auto-fix can POST it to /api/generate (which rejects non-`data:` URLs). The cached
+    // result is still shown instantly above; this just upgrades imageUrl in the background.
+    void fetchImageAsDataUrl(example.thumbnail)
+      .then((dataUrl) => setImageUrl(dataUrl))
+      .catch(() => {
+        // Leave the thumbnail path in place; repair will surface a friendly error if used.
+      });
   }, []);
 
   /** Runtime repair: re-POST the current image + broken jsx + the Sandpack error. */
@@ -508,7 +562,11 @@ export function ScreenshotStudio() {
     setCode('');
   };
 
-  const showWorkspace = status === 'loading' || status === 'ready';
+  // Keep the workspace mounted whenever there is work to preserve: while loading,
+  // when ready, or when an error occurred but we still have a generated result on
+  // screen. Only an error with NO prior result falls back to the empty dropzone.
+  const hasResult = result !== null && code !== '';
+  const showWorkspace = status === 'loading' || status === 'ready' || (status === 'error' && hasResult);
 
   return (
     <div className="h-full overflow-y-auto bg-parchment">
@@ -586,9 +644,9 @@ export function ScreenshotStudio() {
             {GALLERY_EXAMPLES.length > 0 && (
               <div className="mt-8 border-t border-ink/10 pt-6 text-left">
                 <p className="font-display text-sm font-semibold text-ink">
-                  Try an example
+                  Try an example{' '}
                   <span className="ml-2 font-body font-normal text-xs text-ink/50">
-                    instant, pre-traced — no upload or API key needed
+                    instant, pre-traced. No upload or API key needed.
                   </span>
                 </p>
                 <ul className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -614,6 +672,29 @@ export function ScreenshotStudio() {
                 </ul>
               </div>
             )}
+          </div>
+        )}
+
+        {showWorkspace && status === 'error' && error && (
+          <div
+            className="mb-4 flex items-start justify-between gap-3 rounded-xl border border-compass/30 bg-compass/5 px-4 py-3"
+            role="alert"
+          >
+            <div>
+              <p className="text-sm font-display font-semibold text-compass">That didn't work</p>
+              <p className="text-sm text-ink/70 mt-0.5">{error}</p>
+              <p className="text-xs text-ink/50 mt-1">Your generated component is still here. Try again when ready.</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setError(null);
+                setStatus('ready');
+              }}
+              className="flex-shrink-0 text-xs text-ink/60 hover:text-ink underline focus:outline-none focus:ring-2 focus:ring-compass/40 rounded"
+            >
+              Dismiss
+            </button>
           </div>
         )}
 
@@ -647,7 +728,7 @@ export function ScreenshotStudio() {
                 </div>
               )}
 
-              {status === 'ready' && result && (
+              {result && (
                 <>
                   <ul className="flex flex-col gap-3">
                     {result.detections.map((d, i) => (
@@ -701,12 +782,12 @@ export function ScreenshotStudio() {
 
             {/* RIGHT: live, editable preview */}
             <section className="rounded-2xl border border-ink/10 overflow-hidden min-h-[480px] bg-warm-white">
-              {status === 'loading' && (
+              {status === 'loading' && !code && (
                 <div className="flex items-center justify-center h-[480px]">
                   <div className="w-10 h-10 border-4 border-compass border-t-transparent rounded-full animate-spin" />
                 </div>
               )}
-              {status === 'ready' && code && (
+              {code && (
                 <SandpackProvider
                   template="react-ts"
                   theme={dark ? 'dark' : 'light'}
@@ -723,7 +804,7 @@ export function ScreenshotStudio() {
                     // URLs as <link> tags) left utility classes inert — hence no Tailwind here.
                     '/index.tsx': { code: A11Y_ENTRY_SOURCE, hidden: true },
                   }}
-                  customSetup={{ dependencies: { 'lucide-react': 'latest', 'axe-core': 'latest' } }}
+                  customSetup={{ dependencies: { 'lucide-react': 'latest' } }}
                 >
                   {/* Toolbar: view toggle + export actions */}
                   <div className="flex flex-wrap items-center justify-between gap-2 border-b border-ink/10 bg-warm-white px-4 py-2">
@@ -764,7 +845,7 @@ export function ScreenshotStudio() {
                         preview={<SandpackPreview showSandpackErrorOverlay style={{ height: 480 }} />}
                       />
                       <p className="border-t border-ink/10 bg-warm-white px-4 py-2 text-center text-xs text-ink/50">
-                        Drag the divider — original screenshot on the left, live render on the right.
+                        Drag the divider. Original screenshot on the left, live render on the right.
                       </p>
                     </>
                   ) : (
