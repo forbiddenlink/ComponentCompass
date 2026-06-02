@@ -8,6 +8,15 @@ import {
 } from '@codesandbox/sandpack-react';
 import { cn } from '../lib/utils';
 import { imageToBase64 } from '../services/vision';
+import {
+  A11Y_ENTRY_SOURCE,
+  A11Y_RUNNER_SOURCE,
+  computeA11yScore,
+  formatA11yViolations,
+  parseA11yConsoleLog,
+  scoreBand,
+  type A11yViolation,
+} from '../lib/preview/a11y';
 
 interface Detection {
   label: string;
@@ -108,6 +117,184 @@ function SandpackErrorWatcher({
   );
 }
 
+/** Accessibility check state: what the in-iframe axe runner reported (or didn't). */
+type A11yState =
+  | { phase: 'pending' }
+  | { phase: 'unavailable' }
+  | { phase: 'ready'; score: number; violations: A11yViolation[] };
+
+/**
+ * Accessibility score badge + collapsible violations list + "Fix accessibility" action.
+ * Listens for `trace-a11y` postMessages from the Sandpack iframe (keyed to the current
+ * jsx so a re-render re-runs the check and the score visibly re-computes).
+ */
+function A11yScore({
+  jsx,
+  onFix,
+  isFixing,
+}: {
+  jsx: string;
+  onFix: (violations: A11yViolation[]) => void;
+  isFixing: boolean;
+}) {
+  const { listen } = useSandpack();
+  const [state, setState] = useState<A11yState>({ phase: 'pending' });
+  const [expanded, setExpanded] = useState(false);
+
+  // New jsx → reset and start waiting for a fresh result.
+  useEffect(() => {
+    setState({ phase: 'pending' });
+    setExpanded(false);
+  }, [jsx]);
+
+  useEffect(() => {
+    let settled = false;
+
+    // The in-iframe runner reports via console.log; Sandpack relays iframe console
+    // to the parent through its client protocol (a raw postMessage from the sandboxed
+    // preview iframe does not reach this window).
+    const unsubscribe = listen((msg) => {
+      if (msg.type !== 'console' || !('log' in msg)) return;
+      const logs = (msg as { log?: Array<{ data?: unknown[] }> }).log;
+      if (!Array.isArray(logs)) return;
+      for (const entry of logs) {
+        const parsed = parseA11yConsoleLog(entry?.data);
+        if (!parsed) continue;
+        settled = true;
+        if (parsed.kind === 'result') {
+          setState({
+            phase: 'ready',
+            score: computeA11yScore(parsed.violations),
+            violations: parsed.violations,
+          });
+        } else {
+          setState({ phase: 'unavailable' });
+        }
+      }
+    });
+
+    // If nothing arrives, axe failed to load/run — don't hang. Allow time for the
+    // CDN axe build to load inside the iframe + the post-mount delay.
+    const timeout = window.setTimeout(() => {
+      if (!settled) setState({ phase: 'unavailable' });
+    }, 8000);
+
+    return () => {
+      unsubscribe();
+      window.clearTimeout(timeout);
+    };
+  }, [listen, jsx]);
+
+  if (state.phase === 'pending') {
+    return (
+      <div className="flex items-center gap-2 border-t border-ink/10 bg-warm-white px-4 py-3 text-sm text-ink/60">
+        <div className="w-4 h-4 border-2 border-ocean border-t-transparent rounded-full animate-spin" />
+        Running accessibility check…
+      </div>
+    );
+  }
+
+  if (state.phase === 'unavailable') {
+    return (
+      <div className="border-t border-ink/10 bg-warm-white px-4 py-3 text-sm text-ink/50" role="status">
+        Accessibility check unavailable.
+      </div>
+    );
+  }
+
+  const { score, violations } = state;
+  const band = scoreBand(score);
+  const badgeClass =
+    band === 'good'
+      ? 'bg-terrain text-white'
+      : band === 'mid'
+        ? 'bg-gold text-ink'
+        : 'bg-compass text-white';
+
+  return (
+    <div className="border-t border-ink/10 bg-warm-white px-4 py-3">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-3">
+          <span
+            className={cn(
+              'inline-flex items-baseline gap-1 rounded-lg px-3 py-1.5 font-display font-semibold shadow-sm',
+              badgeClass,
+            )}
+            aria-label={`Accessibility score ${score} out of 100`}
+          >
+            <span className="text-lg leading-none">{score}</span>
+            <span className="text-xs opacity-80">/100</span>
+          </span>
+          <div className="flex flex-col">
+            <span className="text-sm font-medium text-ink">Accessibility score</span>
+            <span
+              className="text-xs text-ink/50"
+              title="Automated check via axe-core. Catches roughly half of WCAG issues — not a certification."
+            >
+              automated check (axe-core){' '}
+              <abbr title="axe-core catches ~57% of WCAG issues automatically. This is a directional signal, not a WCAG certification.">
+                ⓘ
+              </abbr>
+            </span>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          disabled={violations.length === 0 || isFixing}
+          onClick={() => onFix(violations)}
+          className="px-3 py-1.5 rounded-lg bg-ocean text-white text-xs font-display font-semibold shadow-sm hover:bg-ocean-dark focus:outline-none focus:ring-2 focus:ring-ocean/40 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {isFixing ? 'Fixing…' : 'Fix accessibility'}
+        </button>
+      </div>
+
+      {violations.length > 0 ? (
+        <div className="mt-2">
+          <button
+            type="button"
+            onClick={() => setExpanded((v) => !v)}
+            className="text-xs text-ink/60 hover:text-ink underline"
+            aria-expanded={expanded}
+          >
+            {expanded ? 'Hide' : 'Show'} {violations.length} violation
+            {violations.length === 1 ? '' : 's'}
+          </button>
+          {expanded && (
+            <ul className="mt-2 flex flex-col gap-2">
+              {violations.map((v, i) => (
+                <li key={`${v.id}-${i}`} className="rounded-lg bg-parchment p-2.5">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <span className="text-xs font-mono text-ink">{v.id}</span>
+                    {v.impact && (
+                      <span
+                        className={cn(
+                          'text-[10px] uppercase tracking-wide font-semibold px-1.5 py-0.5 rounded',
+                          v.impact === 'critical' || v.impact === 'serious'
+                            ? 'bg-compass/15 text-compass'
+                            : 'bg-gold/20 text-ink/70',
+                        )}
+                      >
+                        {v.impact}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-ink/70 mt-1">{v.help}</p>
+                  <p className="text-[11px] text-ink/40 mt-0.5">
+                    {v.nodeCount} node{v.nodeCount === 1 ? '' : 's'} affected
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      ) : (
+        <p className="mt-2 text-xs text-terrain">No automated accessibility violations found.</p>
+      )}
+    </div>
+  );
+}
+
 export function ScreenshotStudio() {
   const [status, setStatus] = useState<Status>('idle');
   const [error, setError] = useState<string | null>(null);
@@ -119,7 +306,10 @@ export function ScreenshotStudio() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const generate = useCallback(
-    async (dataUrl: string, repair?: { previousJsx: string; errorMessage: string }) => {
+    async (
+      dataUrl: string,
+      repair?: { previousJsx: string; errorMessage: string; repairReason?: 'compile' | 'a11y' },
+    ) => {
       setStatus('loading');
       setError(null);
       setResult(null);
@@ -153,6 +343,24 @@ export function ScreenshotStudio() {
       setIsFixing(true);
       try {
         await generate(imageUrl, { previousJsx: code, errorMessage });
+      } finally {
+        setIsFixing(false);
+      }
+    },
+    [imageUrl, code, generate],
+  );
+
+  /** Accessibility repair: re-ask the model to fix the reported a11y violations. */
+  const handleFixA11y = useCallback(
+    async (violations: A11yViolation[]) => {
+      if (!imageUrl || !code || violations.length === 0) return;
+      setIsFixing(true);
+      try {
+        await generate(imageUrl, {
+          previousJsx: code,
+          errorMessage: formatA11yViolations(violations),
+          repairReason: 'a11y',
+        });
       } finally {
         setIsFixing(false);
       }
@@ -364,14 +572,23 @@ export function ScreenshotStudio() {
               {status === 'ready' && code && (
                 <SandpackProvider
                   template="react-ts"
-                  files={{ '/App.tsx': { code } }}
+                  files={{
+                    '/App.tsx': { code },
+                    // The a11y runner as a real preview file. Imported from the entry below
+                    // (a side-effect import) so it executes inside the rendered iframe.
+                    '/a11y.ts': { code: A11Y_RUNNER_SOURCE, hidden: true },
+                    // Custom entry: renders App AND imports the runner. Overriding /index.tsx
+                    // is what makes the runner execute (Sandpack's react-ts entry is /index.tsx).
+                    '/index.tsx': { code: A11Y_ENTRY_SOURCE, hidden: true },
+                  }}
                   options={{ externalResources: ['https://cdn.tailwindcss.com'] }}
-                  customSetup={{ dependencies: { 'lucide-react': 'latest' } }}
+                  customSetup={{ dependencies: { 'lucide-react': 'latest', 'axe-core': 'latest' } }}
                 >
                   <SandpackLayout>
                     <SandpackPreview showSandpackErrorOverlay style={{ height: 480 }} />
                     <SandpackCodeEditor showLineNumbers style={{ height: 480 }} />
                   </SandpackLayout>
+                  <A11yScore jsx={code} onFix={handleFixA11y} isFixing={isFixing} />
                   <SandpackErrorWatcher onFix={handleAutoFix} isFixing={isFixing} />
                 </SandpackProvider>
               )}

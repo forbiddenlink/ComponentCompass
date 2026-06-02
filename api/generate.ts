@@ -5,8 +5,9 @@ import { generateFromScreenshot } from './_lib/generate';
  * POST /api/generate
  * Body: {
  *   imageDataUrl: string,          // a data:<mime>;base64,<payload> URL
- *   previousJsx?: string,          // optional: prior jsx that failed at runtime (targeted repair)
- *   errorMessage?: string,         // optional: the runtime/compile error for previousJsx
+ *   previousJsx?: string,          // optional: prior jsx to repair (targeted repair)
+ *   errorMessage?: string,         // optional: compile/runtime error OR a11y issues for previousJsx
+ *   repairReason?: 'compile' | 'a11y', // optional: how to frame the repair (default 'compile')
  * }
  * Returns: GenResult JSON ({ detections, jsx, componentsUsed, notes, repairs }).
  */
@@ -26,14 +27,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(503).json({ error: 'Google Generative AI API key not configured on server' });
   }
 
-  const { imageDataUrl, previousJsx, errorMessage } = req.body ?? {};
+  const { imageDataUrl, previousJsx, errorMessage, repairReason } = req.body ?? {};
   if (!imageDataUrl || typeof imageDataUrl !== 'string') {
     return res.status(400).json({ error: 'imageDataUrl is required' });
   }
 
   const repair =
     typeof previousJsx === 'string' && typeof errorMessage === 'string'
-      ? { previousJsx, errorMessage }
+      ? {
+          previousJsx,
+          errorMessage,
+          repairReason: repairReason === 'a11y' ? ('a11y' as const) : ('compile' as const),
+        }
       : undefined;
 
   try {

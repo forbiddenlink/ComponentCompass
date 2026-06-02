@@ -41,12 +41,17 @@ export interface GenResult {
   repairs: number;
 }
 
-/** Optional targeted-repair context passed from the client when generated code fails at runtime. */
+/** Optional targeted-repair context passed from the client when generated code needs fixing. */
 export interface RepairContext {
-  /** The previously generated jsx that failed. */
+  /** The previously generated jsx that needs fixing. */
   previousJsx?: string;
-  /** The compile/runtime error message captured for the previous jsx. */
+  /** The issue(s) to fix: a compile/runtime error, or a formatted list of a11y violations. */
   errorMessage?: string;
+  /**
+   * What kind of fix this is. 'compile' (default) frames the issues as a compile/runtime
+   * failure; 'a11y' frames them as accessibility issues to fix while preserving the design.
+   */
+  repairReason?: 'compile' | 'a11y';
 }
 
 const detectionSchema = z.object({
@@ -127,23 +132,39 @@ Put the catalog names you leaned on in "componentsUsed", and a short rationale i
 CATALOG WHITELIST (recreate using these patterns/variants where possible):
 ${buildCatalogPrompt()}`;
 
-/** Build the targeted-repair instruction appended to the base prompt on a repair pass. */
-function buildRepairPrompt(previousJsx: string, errorMessage: string): string {
-  return `${PROMPT}
-
-REPAIR PASS: The previous attempt below FAILED to compile with this error:
+/**
+ * Build the targeted-repair instruction appended to the base prompt on a repair pass.
+ * Handles BOTH compile/runtime errors and accessibility/quality fixes.
+ */
+function buildRepairPrompt(
+  previousJsx: string,
+  errorMessage: string,
+  reason: 'compile' | 'a11y' = 'compile',
+): string {
+  const framing =
+    reason === 'a11y'
+      ? `REPAIR PASS: The previous attempt below has these ACCESSIBILITY issues. Fix ALL of
+them while KEEPING the same visual design, layout, and styling unchanged:
+---ISSUES---
+${errorMessage}
+---END ISSUES---`
+      : `REPAIR PASS: The previous attempt below FAILED to compile with this error:
 ---ERROR---
 ${errorMessage}
----END ERROR---
+---END ERROR---`;
 
-Previous (broken) App.tsx:
+  return `${PROMPT}
+
+${framing}
+
+Previous App.tsx:
 ---CODE---
 ${previousJsx}
 ---END CODE---
 
 Return CORRECTED, self-contained App.tsx in the "jsx" field, obeying ALL the rules above
-(only react + lucide-react imports, Tailwind classes, default-exported \`App\`). Fix the cause
-of the error; do not reintroduce it.`;
+(only react + lucide-react imports, Tailwind classes, default-exported \`App\`). Fix the
+issues above; do not reintroduce them.`;
 }
 
 /**
@@ -238,7 +259,9 @@ export async function generateFromScreenshot(
   let result: z.infer<typeof genSchema>;
   let repairs = 0;
   if (repair?.previousJsx && repair.errorMessage) {
-    result = await runGeneration(buildRepairPrompt(repair.previousJsx, repair.errorMessage));
+    result = await runGeneration(
+      buildRepairPrompt(repair.previousJsx, repair.errorMessage, repair.repairReason ?? 'compile'),
+    );
     repairs = 1;
   } else {
     result = await runGeneration();
