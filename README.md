@@ -4,7 +4,7 @@
 
 ![Trace demo](docs/demo.gif) <!-- TODO add gif -->
 
-Live demo: <!-- TODO -->
+Live demo: **https://trace-seven-ashen.vercel.app**
 
 ## What it does
 

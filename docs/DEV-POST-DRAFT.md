@@ -16,7 +16,7 @@ That is Trace. Eight months ago it was a dead repo. Here is how I finished it.
 
 ![Trace in action](TODO-demo.gif)
 
-> Live demo: TODO-live-url (try an example, no signup, no API key)
+> Live demo: https://trace-seven-ashen.vercel.app (try an example, no signup, no API key)
 > Code: https://github.com/forbiddenlink/trace
 
 ## What I Built
@@ -40,7 +40,7 @@ Stack: Vite, React 19, TypeScript, Tailwind, Gemini through the Vercel AI SDK, S
 
 ## Demo
 
-> Live: TODO-live-url
+> Live: https://trace-seven-ashen.vercel.app
 > Walkthrough GIF below.
 
 ![Generate, score, fix](TODO-demo.gif)
