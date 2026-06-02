@@ -1,0 +1,260 @@
+[
+  {
+    "id": "pricing-card",
+    "title": "Pricing card",
+    "thumbnail": "/examples/pricing-card.png",
+    "result": {
+      "detections": [
+        {
+          "label": "Pricing Card Container",
+          "componentName": "Card",
+          "variant": "default",
+          "confidence": 1
+        },
+        {
+          "label": "PRO Badge",
+          "componentName": "Badge",
+          "variant": "default",
+          "confidence": 1
+        },
+        {
+          "label": "Get started button",
+          "componentName": "Button",
+          "variant": "default",
+          "confidence": 1
+        }
+      ],
+      "jsx": "import React from 'react';import { Check } from 'lucide-react';export default function App() {return (<div className=\"min-h-screen bg-gray-100 flex items-center justify-center p-4\"><div className=\"bg-white rounded-xl shadow-lg p-8 w-full max-w-sm\"><span className=\"inline-flex items-center rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-medium text-indigo-700\">PRO</span><div className=\"mt-4 text-5xl font-bold text-gray-900\">$29<span className=\"text-xl font-medium text-gray-600\">/month</span></div><p className=\"mt-2 text-gray-600\">Everything you need to scale your team.</p><div className=\"mt-6 space-y-3\"><div className=\"flex items-center\"><Check className=\"h-5 w-5 text-green-500 mr-2\" /><span className=\"text-gray-700\">Unlimited projects</span></div><div className=\"flex items-center\"><Check className=\"h-5 w-5 text-green-500 mr-2\" /><span className=\"text-gray-700\">Priority support</span></div><div className=\"flex items-center\"><Check className=\"h-5 w-5 text-green-500 mr-2\" /><span className=\"text-gray-700\">Advanced analytics</span></div><div className=\"flex items-center\"><Check className=\"h-5 w-5 text-green-500 mr-2\" /><span className=\"text-gray-700\">100 GB storage</span></div></div><button className=\"mt-8 w-full rounded-lg bg-indigo-600 py-3 px-6 text-white font-medium hover:bg-indigo-700 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2\">Get started</button></div></div>);}",
+      "componentsUsed": [
+        "Card",
+        "Badge",
+        "Button"
+      ],
+      "notes": "The layout is a simple pricing card. The main container is represented by a Card. The 'PRO' label is a Badge. The 'Get started' call to action is a Button. The feature list items are composed of text and a checkmark icon from lucide-react, as there isn't a specific 'List Item' component in the catalog.",
+      "repairs": 0
+    }
+  },
+  {
+    "id": "login-form",
+    "title": "Login form",
+    "thumbnail": "/examples/login-form.png",
+    "result": {
+      "detections": [
+        {
+          "label": "Login Form Card",
+          "componentName": "Card",
+          "variant": "default",
+          "confidence": 1
+        },
+        {
+          "label": "Welcome Back Heading",
+          "componentName": "Text",
+          "confidence": 0.9
+        },
+        {
+          "label": "Subtitle Text",
+          "componentName": "Text",
+          "confidence": 0.9
+        },
+        {
+          "label": "Email Label",
+          "componentName": "Text",
+          "confidence": 0.9
+        },
+        {
+          "label": "Email Input Field",
+          "componentName": "Input",
+          "variant": "default",
+          "confidence": 1
+        },
+        {
+          "label": "Password Label",
+          "componentName": "Text",
+          "confidence": 0.9
+        },
+        {
+          "label": "Forgot Password Link",
+          "componentName": "Button",
+          "variant": "link",
+          "confidence": 1
+        },
+        {
+          "label": "Password Input Field",
+          "componentName": "Input",
+          "variant": "default",
+          "confidence": 1
+        },
+        {
+          "label": "Remember Me Checkbox",
+          "componentName": "Checkbox",
+          "variant": "default",
+          "confidence": 1
+        },
+        {
+          "label": "Remember Me Label",
+          "componentName": "Text",
+          "confidence": 0.9
+        },
+        {
+          "label": "Sign In Button",
+          "componentName": "Button",
+          "variant": "default",
+          "confidence": 1
+        },
+        {
+          "label": "Continue with Google Button",
+          "componentName": "Button",
+          "variant": "outline",
+          "confidence": 1
+        },
+        {
+          "label": "No Account Text",
+          "componentName": "Text",
+          "confidence": 0.9
+        },
+        {
+          "label": "Sign Up Link",
+          "componentName": "Button",
+          "variant": "link",
+          "confidence": 1
+        }
+      ],
+      "jsx": "import React, { useState } from 'react';export default function App() {  const [email, setEmail] = useState('');  const [password, setPassword] = useState('');  const [rememberMe, setRememberMe] = useState(false);  return (    <div className=\"min-h-screen bg-gray-100 flex items-center justify-center p-4\">      <div className=\"bg-white rounded-xl shadow-lg p-8 w-full max-w-md\">        <h2 className=\"text-3xl font-bold text-gray-900 mb-2\">Welcome back</h2>        <p className=\"text-gray-600 mb-8\">Sign in to your account to continue.</p>        <div className=\"mb-6\">          <label htmlFor=\"email\" className=\"block text-sm font-medium text-gray-700 mb-2\">            Email          </label>          <input            type=\"email\"            id=\"email\"            className=\"block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm\"            placeholder=\"you@example.com\"            value={email}            onChange={(e) => setEmail(e.target.value)}          />        </div>        <div className=\"mb-6\">          <div className=\"flex justify-between items-center mb-2\">            <label htmlFor=\"password\" className=\"block text-sm font-medium text-gray-700\">              Password            </label>            <button type=\"button\" className=\"text-sm text-indigo-600 hover:text-indigo-500 font-medium\">              Forgot?            </button>          </div>          <input            type=\"password\"            id=\"password\"            className=\"block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm\"            placeholder=\"••••••••\"            value={password}            onChange={(e) => setPassword(e.target.value)}          />        </div>        <div className=\"flex items-center mb-6\">          <input            id=\"remember-me\"            name=\"remember-me\"            type=\"checkbox\"            className=\"h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded\"            checked={rememberMe}            onChange={(e) => setRememberMe(e.target.checked)}          />          <label htmlFor=\"remember-me\" className=\"ml-2 block text-sm text-gray-900\">            Remember me          </label>        </div>        <button          type=\"submit\"          className=\"w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 mb-4\"        >          Sign in        </button>        <button          type=\"button\"          className=\"w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500\"        >          Continue with Google        </button>        <p className=\"mt-8 text-center text-sm text-gray-600\">          No account?{' '}          <button type=\"button\" className=\"font-medium text-indigo-600 hover:text-indigo-500\">            Sign up          </button>        </p>      </div>    </div>  );}",
+      "componentsUsed": [
+        "Card",
+        "Input",
+        "Button",
+        "Checkbox"
+      ],
+      "notes": "The layout is a centered card containing a login form. The Card component was used for the main container. Input components were used for the email and password fields, with appropriate styling for borders, padding, and focus states. The Checkbox component was used for the 'Remember me' option. Buttons were styled using the 'default' variant for 'Sign in' (purple background), 'outline' for 'Continue with Google' (white background with border), and 'link' for 'Forgot?' and 'Sign up'. Tailwind's `indigo-600` was used to match the primary purple color.",
+      "repairs": 0
+    }
+  },
+  {
+    "id": "dashboard-stats",
+    "title": "Dashboard stat cards",
+    "thumbnail": "/examples/dashboard-stats.png",
+    "result": {
+      "detections": [
+        {
+          "label": "Total revenue card",
+          "componentName": "Card",
+          "confidence": 1
+        },
+        {
+          "label": "Active users card",
+          "componentName": "Card",
+          "confidence": 1
+        },
+        {
+          "label": "Conversion card",
+          "componentName": "Card",
+          "confidence": 1
+        },
+        {
+          "label": "Average session card",
+          "componentName": "Card",
+          "confidence": 1
+        },
+        {
+          "label": "Revenue change badge",
+          "componentName": "Badge",
+          "confidence": 0.9
+        },
+        {
+          "label": "Active users change badge",
+          "componentName": "Badge",
+          "confidence": 0.9
+        },
+        {
+          "label": "Conversion change badge",
+          "componentName": "Badge",
+          "confidence": 0.9
+        },
+        {
+          "label": "Average session change badge",
+          "componentName": "Badge",
+          "confidence": 0.9
+        }
+      ],
+      "jsx": "import React from 'react';export default function App() {return (<div className=\"min-h-screen bg-gray-100 p-8 flex items-center justify-center\"><div className=\"grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl w-full\"><div className=\"bg-white rounded-xl shadow-sm p-6\"><div className=\"flex justify-between items-center\"><p className=\"text-gray-500 text-sm\">Total revenue</p><span className=\"px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800\">+12.5%</span></div><p className=\"font-bold text-4xl mt-2\">$48,290</p><p className=\"text-gray-500 text-sm mt-1\">vs. $42,910 last month</p></div><div className=\"bg-white rounded-xl shadow-sm p-6\"><div className=\"flex justify-between items-center\"><p className=\"text-gray-500 text-sm\">Active users</p><span className=\"px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800\">+4.2%</span></div><p className=\"font-bold text-4xl mt-2\">2,318</p><p className=\"text-gray-500 text-sm mt-1\">vs. 2,224 last month</p></div><div className=\"bg-white rounded-xl shadow-sm p-6\"><div className=\"flex justify-between items-center\"><p className=\"text-gray-500 text-sm\">Conversion</p><span className=\"px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800\">-1.1%</span></div><p className=\"font-bold text-4xl mt-2\">3.24%</p><p className=\"text-gray-500 text-sm mt-1\">vs. 3.28% last month</p></div><div className=\"bg-white rounded-xl shadow-sm p-6\"><div className=\"flex justify-between items-center\"><p className=\"text-gray-500 text-sm\">Avg. session</p><span className=\"px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800\">+8.0%</span></div><p className=\"font-bold text-4xl mt-2\">4m 12s</p><p className=\"text-gray-500 text-sm mt-1\">vs. 3m 53s last month</p></div></div></div>);}",
+      "componentsUsed": [
+        "Card",
+        "Badge"
+      ],
+      "notes": "The layout is a simple 2x2 grid of cards. Each card displays a metric title, the main value, a comparison text, and a percentage change badge. The specific light green and light red background colors for the badges are achieved using custom Tailwind classes as these exact color variants are not explicitly available in the Badge component's whitelist variants.",
+      "repairs": 0
+    }
+  },
+  {
+    "id": "nav-sidebar",
+    "title": "Navigation sidebar",
+    "thumbnail": "/examples/nav-sidebar.png",
+    "result": {
+      "detections": [
+        {
+          "label": "Main container card",
+          "componentName": "Card",
+          "variant": "default",
+          "confidence": 1
+        },
+        {
+          "label": "Company logo (A)",
+          "componentName": "Badge",
+          "variant": "default",
+          "confidence": 0.7
+        },
+        {
+          "label": "Dashboard navigation link",
+          "componentName": "Button",
+          "variant": "ghost",
+          "confidence": 0.9
+        },
+        {
+          "label": "Projects navigation link",
+          "componentName": "Button",
+          "variant": "ghost",
+          "confidence": 0.9
+        },
+        {
+          "label": "Team navigation link",
+          "componentName": "Button",
+          "variant": "ghost",
+          "confidence": 0.9
+        },
+        {
+          "label": "Reports navigation link",
+          "componentName": "Button",
+          "variant": "ghost",
+          "confidence": 0.9
+        },
+        {
+          "label": "Settings navigation link",
+          "componentName": "Button",
+          "variant": "ghost",
+          "confidence": 0.9
+        },
+        {
+          "label": "User profile card",
+          "componentName": "Card",
+          "variant": "default",
+          "confidence": 1
+        },
+        {
+          "label": "User avatar placeholder",
+          "componentName": "Badge",
+          "variant": "default",
+          "confidence": 0.6
+        }
+      ],
+      "jsx": "import React from 'react';const cn = (...inputs) => {return inputs.filter(Boolean).join(\" \");};interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {variant?: \"default\" | \"destructive\" | \"outline\" | \"secondary\" | \"ghost\" | \"link\";size?: \"default\" | \"sm\" | \"lg\" | \"icon\";asChild?: boolean;}const Button = React.forwardRef(({\n  className,\n  variant = \"default\",\n  size = \"default\",\n  asChild = false,\n  ...props\n}, ref) => {\n  const Comp = asChild ? \"span\" : \"button\";\n  const baseClasses = \"inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50\";\n  const variantClasses = {\n    default: \"bg-blue-600 text-white hover:bg-blue-700\",\n    destructive: \"bg-red-600 text-white hover:bg-red-700\",\n    outline: \"border border-gray-300 bg-white hover:bg-gray-100\",\n    secondary: \"bg-gray-200 text-gray-800 hover:bg-gray-300\",\n    ghost: \"hover:bg-gray-100 hover:text-gray-900\",\n    link: \"text-blue-600 underline-offset-4 hover:underline\"\n  };\n  const sizeClasses = {\n    default: \"h-10 px-4 py-2\",\n    sm: \"h-9 rounded-md px-3\",\n    lg: \"h-11 rounded-md px-8\",\n    icon: \"h-10 w-10\"\n  };\n  return (<Comp className={cn(baseClasses, variantClasses[variant], sizeClasses[size], className)} ref={ref} {...props} />);\n});Button.displayName = \"Button\";interface CardProps extends React.HTMLAttributes<HTMLDivElement> {}const Card = React.forwardRef(({\n  className,\n  ...props\n}, ref) => (<div ref={ref} className={cn(\"rounded-xl bg-white shadow-lg\", className)} {...props} />));Card.displayName = \"Card\";export default function App() {return (<div className=\"min-h-screen bg-gray-100 flex items-center justify-center p-4\"><Card className=\"w-full max-w-xs p-4 flex flex-col justify-between\" style={{minHeight: '600px'}}><div className=\"flex flex-col\"><div className=\"flex items-center space-x-3 mb-8 px-2\"><div className=\"w-10 h-10 bg-violet-600 rounded-md flex items-center justify-center text-white font-bold text-lg\">A</div><p className=\"font-semibold text-lg text-gray-900\">Acme Inc</p></div><nav className=\"space-y-1\"><Button variant=\"ghost\" className=\"w-full justify-start text-violet-800 bg-violet-100 px-2 py-2 h-auto\"><div className=\"w-2 h-2 rounded-full bg-violet-600 mr-3\"></div>Dashboard</Button><Button variant=\"ghost\" className=\"w-full justify-start text-gray-600 px-2 py-2 h-auto\"><div className=\"w-2 h-2 rounded-full bg-gray-400 mr-3\"></div>Projects</Button><Button variant=\"ghost\" className=\"w-full justify-start text-gray-600 px-2 py-2 h-auto\"><div className=\"w-2 h-2 rounded-full bg-gray-400 mr-3\"></div>Team</Button><Button variant=\"ghost\" className=\"w-full justify-start text-gray-600 px-2 py-2 h-auto\"><div className=\"w-2 h-2 rounded-full bg-gray-400 mr-3\"></div>Reports</Button><Button variant=\"ghost\" className=\"w-full justify-start text-gray-600 px-2 py-2 h-auto\"><div className=\"w-2 h-2 rounded-full bg-gray-400 mr-3\"></div>Settings</Button></nav></div><Card className=\"p-3 flex items-center space-x-3 shadow-none border border-gray-200\"><div className=\"w-10 h-10 bg-gray-300 rounded-full\"></div><div><p className=\"font-medium text-gray-900\">Jane Doe</p><p className=\"text-sm text-gray-500\">jane@acme.com</p></div></Card></Card></div>);}",
+      "componentsUsed": [
+        "Card",
+        "Button",
+        "Badge"
+      ],
+      "notes": "The UI is structured around a main `Card` component, which also contains a nested `Card` for the user profile at the bottom. Navigation items are implemented using `Button` components with the `ghost` variant, customized with specific Tailwind classes for active/inactive states and bullet points. The company logo ('A') and the user avatar are represented using `Badge` components, as they are the closest catalog elements for small, styled visual indicators, although their typical use case might differ. Plain text elements like company name, user name, and email are rendered directly as `p` tags and are not mapped to catalog components.",
+      "repairs": 0
+    }
+  }
+]

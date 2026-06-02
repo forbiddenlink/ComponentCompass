@@ -4,10 +4,13 @@ import {
   SandpackLayout,
   SandpackPreview,
   SandpackCodeEditor,
+  UnstyledOpenInCodeSandboxButton,
   useSandpack,
 } from '@codesandbox/sandpack-react';
+import { ReactCompareSlider, ReactCompareSliderImage } from 'react-compare-slider';
 import { cn } from '../lib/utils';
 import { imageToBase64 } from '../services/vision';
+import { GALLERY_EXAMPLES } from '../data/gallery';
 import {
   A11Y_ENTRY_SOURCE,
   A11Y_RUNNER_SOURCE,
@@ -295,6 +298,73 @@ function A11yScore({
   );
 }
 
+/** Persisted Sandpack/editor theme choice. */
+const THEME_STORAGE_KEY = 'trace-studio-theme';
+
+function useStudioTheme(): [boolean, () => void] {
+  const [dark, setDark] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return window.localStorage.getItem(THEME_STORAGE_KEY) === 'dark';
+  });
+  const toggle = useCallback(() => {
+    setDark((prev) => {
+      const next = !prev;
+      try {
+        window.localStorage.setItem(THEME_STORAGE_KEY, next ? 'dark' : 'light');
+      } catch {
+        // localStorage may be unavailable (private mode); fail silently.
+      }
+      return next;
+    });
+  }, []);
+  return [dark, toggle];
+}
+
+/** Copy the generated code to the clipboard with a transient confirmation. */
+function CopyCodeButton({ code }: { code: string }) {
+  const [copied, setCopied] = useState(false);
+  const onCopy = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1800);
+    } catch {
+      setCopied(false);
+    }
+  }, [code]);
+  return (
+    <button
+      type="button"
+      onClick={() => void onCopy()}
+      className="px-3 py-1.5 rounded-lg border border-ink/20 text-ink text-xs font-display font-semibold hover:bg-ink/5 focus:outline-none focus:ring-2 focus:ring-compass/40"
+      aria-live="polite"
+    >
+      {copied ? 'Copied!' : 'Copy code'}
+    </button>
+  );
+}
+
+/**
+ * Screenshot-vs-render proof. The input screenshot on one side, the live Sandpack
+ * preview on the other, behind a draggable divider. The preview is the actual
+ * rendered component (not a static snapshot), so the comparison stays live.
+ */
+function CompareView({ imageUrl, preview }: { imageUrl: string; preview: React.ReactNode }) {
+  return (
+    <ReactCompareSlider
+      className="h-[480px] w-full bg-warm-white"
+      itemOne={
+        <ReactCompareSliderImage
+          src={imageUrl}
+          alt="Original screenshot"
+          style={{ objectFit: 'contain', background: '#F9F6F0' }}
+        />
+      }
+      itemTwo={<div className="h-full w-full bg-white">{preview}</div>}
+    />
+  );
+}
+
 export function ScreenshotStudio() {
   const [status, setStatus] = useState<Status>('idle');
   const [error, setError] = useState<string | null>(null);
@@ -303,6 +373,8 @@ export function ScreenshotStudio() {
   const [code, setCode] = useState<string>('');
   const [isDragging, setIsDragging] = useState(false);
   const [isFixing, setIsFixing] = useState(false);
+  const [rightView, setRightView] = useState<'code' | 'compare'>('code');
+  const [dark, toggleDark] = useStudioTheme();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const generate = useCallback(
@@ -335,6 +407,26 @@ export function ScreenshotStudio() {
     },
     [],
   );
+
+  /**
+   * Load a pre-baked gallery example straight into the result view — no upload,
+   * no network, no API key. The cached result was produced once by the real
+   * pipeline at author time (see scripts/build-gallery.mjs).
+   */
+  const loadExample = useCallback((example: (typeof GALLERY_EXAMPLES)[number]) => {
+    setError(null);
+    setImageUrl(example.thumbnail);
+    setResult({
+      detections: example.result.detections,
+      jsx: example.result.jsx,
+      componentsUsed: example.result.componentsUsed,
+      notes: example.result.notes,
+      repairs: example.result.repairs,
+    });
+    setCode(example.result.jsx);
+    setRightView('code');
+    setStatus('ready');
+  }, []);
 
   /** Runtime repair: re-POST the current image + broken jsx + the Sandpack error. */
   const handleAutoFix = useCallback(
@@ -421,12 +513,23 @@ export function ScreenshotStudio() {
   return (
     <div className="h-full overflow-y-auto bg-parchment">
       <div className="max-w-7xl mx-auto px-4 py-6">
-        <header className="mb-6">
-          <h1 className="font-display text-h1 text-ink">Screenshot Studio</h1>
-          <p className="text-sm text-ink/70 mt-1">
-            Paste, drop, or upload a UI screenshot. Gemini recreates it as a live, editable React
-            component grounded in the Trace component catalog.
-          </p>
+        <header className="mb-6 flex items-start justify-between gap-4">
+          <div>
+            <h1 className="font-display text-h1 text-ink">Screenshot Studio</h1>
+            <p className="text-sm text-ink/70 mt-1">
+              Paste, drop, or upload a UI screenshot. Gemini recreates it as a live, editable React
+              component grounded in the Trace component catalog.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={toggleDark}
+            aria-pressed={dark}
+            title="Toggle editor theme"
+            className="flex-shrink-0 px-3 py-1.5 rounded-lg border border-ink/20 text-ink text-xs font-display font-semibold hover:bg-ink/5 focus:outline-none focus:ring-2 focus:ring-compass/40"
+          >
+            {dark ? '☀ Light editor' : '☾ Dark editor'}
+          </button>
         </header>
 
         {!showWorkspace && (
@@ -442,9 +545,11 @@ export function ScreenshotStudio() {
               isDragging ? 'border-compass bg-compass/5' : 'border-ink/15',
             )}
           >
-            <p className="font-display text-lg text-ink">Drop a screenshot here</p>
+            <p className="font-display text-lg text-ink">
+              {isDragging ? 'Drop to trace it' : 'Drop a screenshot here'}
+            </p>
             <p className="text-sm text-ink/60 mt-1">
-              or paste from clipboard (Cmd/Ctrl+V), or
+              Drag in a PNG, paste from your clipboard (Cmd/Ctrl+V), or
             </p>
             <div className="mt-4 flex items-center justify-center gap-3">
               <button
@@ -459,7 +564,7 @@ export function ScreenshotStudio() {
                 onClick={() => void generate(SAMPLE_DATA_URL)}
                 className="px-4 py-2 rounded-lg border border-ink/20 text-ink text-sm font-display font-semibold hover:bg-ink/5 focus:outline-none focus:ring-2 focus:ring-compass/40"
               >
-                Try a sample
+                Try a live sample
               </button>
             </div>
             <input
@@ -476,6 +581,38 @@ export function ScreenshotStudio() {
               <p className="mt-4 text-sm text-compass" role="alert">
                 {error}
               </p>
+            )}
+
+            {GALLERY_EXAMPLES.length > 0 && (
+              <div className="mt-8 border-t border-ink/10 pt-6 text-left">
+                <p className="font-display text-sm font-semibold text-ink">
+                  Try an example
+                  <span className="ml-2 font-body font-normal text-xs text-ink/50">
+                    instant, pre-traced — no upload or API key needed
+                  </span>
+                </p>
+                <ul className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  {GALLERY_EXAMPLES.map((example) => (
+                    <li key={example.id}>
+                      <button
+                        type="button"
+                        onClick={() => loadExample(example)}
+                        className="group flex w-full flex-col gap-2 rounded-xl border border-ink/15 bg-parchment p-2 text-left transition-colors hover:border-compass focus:outline-none focus:ring-2 focus:ring-compass/40"
+                      >
+                        <img
+                          src={example.thumbnail}
+                          alt={`${example.title} example`}
+                          loading="lazy"
+                          className="h-28 w-full rounded-lg border border-ink/10 bg-white object-cover object-top"
+                        />
+                        <span className="text-xs font-display font-semibold text-ink group-hover:text-compass">
+                          {example.title}
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             )}
           </div>
         )}
@@ -572,6 +709,7 @@ export function ScreenshotStudio() {
               {status === 'ready' && code && (
                 <SandpackProvider
                   template="react-ts"
+                  theme={dark ? 'dark' : 'light'}
                   files={{
                     '/App.tsx': { code },
                     // The a11y runner as a real preview file. Imported from the entry below
@@ -584,10 +722,54 @@ export function ScreenshotStudio() {
                   options={{ externalResources: ['https://cdn.tailwindcss.com'] }}
                   customSetup={{ dependencies: { 'lucide-react': 'latest', 'axe-core': 'latest' } }}
                 >
-                  <SandpackLayout>
-                    <SandpackPreview showSandpackErrorOverlay style={{ height: 480 }} />
-                    <SandpackCodeEditor showLineNumbers style={{ height: 480 }} />
-                  </SandpackLayout>
+                  {/* Toolbar: view toggle + export actions */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-ink/10 bg-warm-white px-4 py-2">
+                    <div
+                      className="inline-flex rounded-lg border border-ink/15 p-0.5"
+                      role="group"
+                      aria-label="Preview view"
+                    >
+                      {(['code', 'compare'] as const).map((mode) => (
+                        <button
+                          key={mode}
+                          type="button"
+                          onClick={() => setRightView(mode)}
+                          aria-pressed={rightView === mode}
+                          className={cn(
+                            'px-3 py-1 rounded-md text-xs font-display font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-compass/40',
+                            rightView === mode
+                              ? 'bg-compass text-white shadow-sm'
+                              : 'text-ink hover:bg-ink/5',
+                          )}
+                        >
+                          {mode === 'code' ? 'Code + Preview' : 'Compare'}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <CopyCodeButton code={code} />
+                      <UnstyledOpenInCodeSandboxButton className="px-3 py-1.5 rounded-lg border border-ink/20 text-ink text-xs font-display font-semibold hover:bg-ink/5 focus:outline-none focus:ring-2 focus:ring-compass/40">
+                        Open in CodeSandbox
+                      </UnstyledOpenInCodeSandboxButton>
+                    </div>
+                  </div>
+
+                  {rightView === 'compare' && imageUrl ? (
+                    <>
+                      <CompareView
+                        imageUrl={imageUrl}
+                        preview={<SandpackPreview showSandpackErrorOverlay style={{ height: 480 }} />}
+                      />
+                      <p className="border-t border-ink/10 bg-warm-white px-4 py-2 text-center text-xs text-ink/50">
+                        Drag the divider — original screenshot on the left, live render on the right.
+                      </p>
+                    </>
+                  ) : (
+                    <SandpackLayout>
+                      <SandpackPreview showSandpackErrorOverlay style={{ height: 480 }} />
+                      <SandpackCodeEditor showLineNumbers style={{ height: 480 }} />
+                    </SandpackLayout>
+                  )}
                   <A11yScore jsx={code} onFix={handleFixA11y} isFixing={isFixing} />
                   <SandpackErrorWatcher onFix={handleAutoFix} isFixing={isFixing} />
                 </SandpackProvider>

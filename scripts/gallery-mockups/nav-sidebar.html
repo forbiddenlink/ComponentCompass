@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      body { font-family: ui-sans-serif, system-ui, sans-serif; }
+    </style>
+  </head>
+  <body class="bg-slate-100">
+    <div id="shot" class="inline-block p-10">
+      <aside class="flex h-[480px] w-64 flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div class="flex items-center gap-2 px-2 py-2">
+          <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 text-sm font-bold text-white">A</div>
+          <span class="text-base font-semibold text-slate-900">Acme Inc</span>
+        </div>
+        <nav class="mt-4 space-y-1">
+          <a class="flex items-center gap-3 rounded-lg bg-indigo-50 px-3 py-2 text-sm font-medium text-indigo-700">
+            <span class="h-2 w-2 rounded-full bg-indigo-600"></span> Dashboard
+          </a>
+          <a class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-600">
+            <span class="h-2 w-2 rounded-full bg-slate-300"></span> Projects
+          </a>
+          <a class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-600">
+            <span class="h-2 w-2 rounded-full bg-slate-300"></span> Team
+          </a>
+          <a class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-600">
+            <span class="h-2 w-2 rounded-full bg-slate-300"></span> Reports
+          </a>
+          <a class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-600">
+            <span class="h-2 w-2 rounded-full bg-slate-300"></span> Settings
+          </a>
+        </nav>
+        <div class="mt-auto flex items-center gap-3 rounded-lg border border-slate-200 p-3">
+          <div class="h-9 w-9 rounded-full bg-slate-300"></div>
+          <div class="leading-tight">
+            <p class="text-sm font-medium text-slate-900">Jane Doe</p>
+            <p class="text-xs text-slate-500">jane@acme.com</p>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </body>
+</html>
