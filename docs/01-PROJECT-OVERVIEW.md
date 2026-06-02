@@ -1,7 +1,7 @@
-# ComponentCompass - Project Overview
+# Trace - Project Overview
 
 ## Elevator Pitch
-ComponentCompass is an AI-powered design system navigator that helps developers and designers find, understand, and implement components through natural conversation. Instead of searching through scattered documentation, users ask questions and get intelligent answers with code, visual previews, and accessibility guidance.
+Trace is an AI-powered design system navigator that helps developers and designers find, understand, and implement components through natural conversation. Instead of searching through scattered documentation, users ask questions and get intelligent answers with code, visual previews, and accessibility guidance.
 
 ## The Problem We're Solving
 

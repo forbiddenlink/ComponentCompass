@@ -1,36 +1,10 @@
 /**
- * Vision analysis via server-side proxy
- * OpenAI API key stays on the server — frontend never touches it
+ * Image helpers for the screenshot-based features.
+ * The Gemini key stays server-side; the frontend only converts files to data URLs
+ * and POSTs them to /api/generate.
  */
 
-interface VisionAnalysisResult {
-  components: Array<{
-    name: string;
-    description: string;
-    confidence: number;
-  }>;
-  layout: string;
-  designStyle: string;
-  suggestions: string[];
-}
-
-export async function analyzeDesignScreenshot(
-  imageUrl: string
-): Promise<VisionAnalysisResult> {
-  const response = await fetch('/api/vision', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ imageUrl }),
-  });
-
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Vision analysis failed' }));
-    throw new Error(error.error || `Vision API error (${response.status})`);
-  }
-
-  return response.json();
-}
-
+/** Read a File into a base64 data URL (`data:<mime>;base64,...`). */
 export function imageToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();

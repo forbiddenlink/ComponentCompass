@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * Test Script for ComponentCompass
+ * Test Script for Trace
  * Verifies all major features are working correctly
  */
 
@@ -12,7 +12,7 @@ import { dirname, join } from 'path';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-console.log('🧪 ComponentCompass Test Suite\n');
+console.log('🧪 Trace Test Suite\n');
 
 // Test 1: Check .env configuration
 console.log('1️⃣ Checking environment configuration...');

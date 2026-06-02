@@ -1,9 +1,9 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('ComponentCompass', () => {
+test.describe('Trace', () => {
   test('loads the app and shows welcome screen', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('h1')).toContainText('ComponentCompass');
+    await expect(page.locator('h1')).toContainText('Trace');
     await expect(page.locator('h2')).toContainText('Chart Your Course');
   });
 

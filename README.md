@@ -1,6 +1,6 @@
-# ComponentCompass
+# Trace
 
-An AI-powered design system navigator built for the [Algolia Agent Studio Challenge](https://www.algolia.com/blog/ai-agents-challenge/). ComponentCompass lets developers discover UI components, explore code implementations, and check accessibility guidelines through natural conversation.
+An AI-powered design system navigator built for the [Algolia Agent Studio Challenge](https://www.algolia.com/blog/ai-agents-challenge/). Trace lets developers discover UI components, explore code implementations, and check accessibility guidelines through natural conversation.
 
 ## What It Does
 
@@ -47,7 +47,7 @@ Open http://localhost:5173
 | `VITE_ALGOLIA_APP_ID` | Yes | Algolia Application ID |
 | `VITE_ALGOLIA_SEARCH_API_KEY` | Yes | Algolia Search API Key |
 | `VITE_ALGOLIA_AGENT_ID` | Yes | Agent Studio Agent ID |
-| `VITE_OPENAI_API_KEY` | No | OpenAI key for screenshot analysis |
+| `GOOGLE_GENERATIVE_AI_API_KEY` | No | Google Gemini key for screenshot analysis (server-side, used by `/api/vision`) |
 
 ## Tech Stack
 
@@ -58,7 +58,7 @@ Open http://localhost:5173
 | AI/Search | Algolia Agent Studio |
 | Streaming | AI SDK 6 (`@ai-sdk/react`) with SSE fallback |
 | Code Display | prism-react-renderer |
-| Vision | OpenAI GPT-4o |
+| Vision | Google Gemini (`gemini-2.0-flash`) |
 
 ## Project Structure
 
@@ -86,7 +86,7 @@ scripts/                   Upload and test utilities
 
 ## Design
 
-ComponentCompass uses a vintage cartographic theme:
+Trace uses a vintage cartographic theme:
 
 - **Parchment** (#F9F6F0) background with map texture
 - **Compass** (#C84B31) accent for interactive elements

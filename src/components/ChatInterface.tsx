@@ -334,7 +334,7 @@ export function ChatInterface() {
                                 "relative w-9 h-9 md:w-11 md:h-11 wax-seal rounded-full flex items-center justify-center flex-shrink-0 transition-transform",
                                 isLoading && "scale-105"
                             )}
-                            title={isLoading ? "Charting territories..." : "ComponentCompass"}
+                            title={isLoading ? "Charting territories..." : "Trace"}
                         >
                             <Compass
                                 className={cn(
@@ -345,7 +345,7 @@ export function ChatInterface() {
                         </div>
                         <div className="min-w-0">
                             <h1 className="text-h1 text-ink tracking-tight font-display truncate">
-                                ComponentCompass
+                                Trace
                             </h1>
                             <p className="text-caption text-muted tracking-wide uppercase">
                                 Navigate Your Design System

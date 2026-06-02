@@ -40,7 +40,7 @@ const DEFAULT_STATS: SessionStats = {
 };
 
 function loadSavedMessages(): LocalMessage[] {
-    const saved = localStorage.getItem('componentcompass_messages');
+    const saved = localStorage.getItem('trace_messages');
     if (!saved) return [];
     try {
         const parsed = JSON.parse(saved);
@@ -54,7 +54,7 @@ function loadSavedMessages(): LocalMessage[] {
 }
 
 function loadSavedStats(): SessionStats {
-    const saved = localStorage.getItem('componentcompass_stats');
+    const saved = localStorage.getItem('trace_stats');
     if (!saved) return DEFAULT_STATS;
     try {
         return JSON.parse(saved);
@@ -72,12 +72,12 @@ export function useMessages({ showToast }: UseMessagesParams) {
     // Save conversation to localStorage whenever display messages change
     useEffect(() => {
         if (displayMessages.length > 0) {
-            localStorage.setItem('componentcompass_messages', JSON.stringify(displayMessages));
+            localStorage.setItem('trace_messages', JSON.stringify(displayMessages));
         }
     }, [displayMessages]);
 
     useEffect(() => {
-        localStorage.setItem('componentcompass_stats', JSON.stringify(sessionStats));
+        localStorage.setItem('trace_stats', JSON.stringify(sessionStats));
     }, [sessionStats]);
 
     const handleNewConversation = useCallback(() => {
@@ -87,8 +87,8 @@ export function useMessages({ showToast }: UseMessagesParams) {
                 setDisplayMessages([]);
                 setStreamMessagesRef.current?.([] as never[]);
                 setSessionStats(DEFAULT_STATS);
-                localStorage.removeItem('componentcompass_messages');
-                localStorage.removeItem('componentcompass_stats');
+                localStorage.removeItem('trace_messages');
+                localStorage.removeItem('trace_stats');
                 agentClient.resetSession();
                 showToast('New conversation started', 'success');
             }
@@ -107,7 +107,7 @@ export function useMessages({ showToast }: UseMessagesParams) {
             return `## ${role} \u00b7 ${timestamp}\n\n${msg.content}\n\n---\n`;
         }).join('\n');
 
-        const header = `# ComponentCompass Session Map\n\nExported: ${new Date().toLocaleString()}\n\n**Session Statistics:**\n- Queries: ${sessionStats.queries}\n- Indices Searched: ${sessionStats.indicesSearched}\n- Components Found: ${sessionStats.componentsFound}\n- Screenshots Analyzed: ${sessionStats.screenshotsAnalyzed}\n\n---\n\n`;
+        const header = `# Trace Session Map\n\nExported: ${new Date().toLocaleString()}\n\n**Session Statistics:**\n- Queries: ${sessionStats.queries}\n- Indices Searched: ${sessionStats.indicesSearched}\n- Components Found: ${sessionStats.componentsFound}\n- Screenshots Analyzed: ${sessionStats.screenshotsAnalyzed}\n\n---\n\n`;
 
         const fullContent = header + markdown;
 
@@ -115,7 +115,7 @@ export function useMessages({ showToast }: UseMessagesParams) {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `component-compass-${Date.now()}.md`;
+        a.download = `trace-${Date.now()}.md`;
         a.click();
         URL.revokeObjectURL(url);
 

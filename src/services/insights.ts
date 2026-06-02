@@ -5,10 +5,10 @@ const env = getEnv();
 const appId = env.VITE_ALGOLIA_APP_ID;
 const apiKey = env.VITE_ALGOLIA_SEARCH_API_KEY;
 
-const INDEX_NAME = 'componentcompass';
+const INDEX_NAME = 'trace';
 
 function getUserToken(): string {
-  const STORAGE_KEY = 'componentcompass-user-token';
+  const STORAGE_KEY = 'trace-user-token';
   let token = localStorage.getItem(STORAGE_KEY);
   if (!token) {
     token = crypto.randomUUID();

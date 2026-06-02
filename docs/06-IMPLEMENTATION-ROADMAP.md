@@ -1,4 +1,4 @@
-# ComponentCompass - Implementation Roadmap
+# Trace - Implementation Roadmap
 
 **Entry Deadline**: February 8, 2026 at 11:59 PM PST
 

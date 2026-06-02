@@ -1,8 +1,8 @@
-# ComponentCompass - UI/UX Specifications
+# Trace - UI/UX Specifications
 
 ## Design Theme: Cartographic / Vintage Map Aesthetic
 
-ComponentCompass uses a distinctive **vintage cartography** metaphor throughout its design, positioning the AI as a navigator charting the territories of a design system.
+Trace uses a distinctive **vintage cartography** metaphor throughout its design, positioning the AI as a navigator charting the territories of a design system.
 
 ### Theme Elements
 - **Wax seal** logo treatment (compass icon in a round seal)
@@ -99,7 +99,7 @@ Gradient BG:      gradient-bg 15s ease-in-out infinite
 - Warm white background with map-texture overlay
 - Decorative compass corner marks (desktop only)
 - Wax-seal compass logo (animated pulse when loading)
-- "ComponentCompass" in Fraunces display font
+- "Trace" in Fraunces display font
 - "Navigate Your Design System" tagline in uppercase tracking
 - Action buttons: Session Map, Export, New Route
 - "Algolia Agent Studio" badge (desktop only)

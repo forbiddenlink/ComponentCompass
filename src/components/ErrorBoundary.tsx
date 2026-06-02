@@ -50,7 +50,7 @@ export class ErrorBoundary extends Component<Props, State> {
                 </h1>
                 <p className="text-terrain mb-4">
                   {isEnvError
-                    ? 'ComponentCompass requires Algolia credentials to function.'
+                    ? 'Trace requires Algolia credentials to function.'
                     : 'The application encountered an unexpected error.'}
                 </p>
               </div>

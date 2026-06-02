@@ -1,7 +1,7 @@
-# ComponentCompass - Data Schemas
+# Trace - Data Schemas
 
 ## Overview
-This document defines the structure of all 7 Algolia indices that power ComponentCompass.
+This document defines the structure of all 7 Algolia indices that power Trace.
 
 ---
 

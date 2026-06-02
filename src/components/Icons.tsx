@@ -1,4 +1,4 @@
-// Custom Cartographic-Themed Icon Components for ComponentCompass
+// Custom Cartographic-Themed Icon Components for Trace
 // All icons follow a vintage nautical chart / explorer's map aesthetic
 
 interface IconProps {

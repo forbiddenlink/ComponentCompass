@@ -121,7 +121,7 @@ async function uploadEnhancedData() {
     console.log('   • 10 real shadcn/ui components');
     console.log('   • 5 complete code implementations');
     console.log('   • 5 comprehensive accessibility guides');
-    console.log('\n✅ Your ComponentCompass now has production-quality data!');
+    console.log('\n✅ Your Trace now has production-quality data!');
 }
 
 uploadEnhancedData().catch(console.error);

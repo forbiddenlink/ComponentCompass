@@ -1,4 +1,4 @@
-# ComponentCompass - Demo Script & Submission
+# Trace - Demo Script & Submission
 
 ## Video Demo Script (3-5 minutes)
 
@@ -15,16 +15,16 @@ and Slack to ask 'which button should I use for this?'"
 
 "What if I could just *ask* my design system?"
 
-**[Screen: Fade to ComponentCompass logo]**
+**[Screen: Fade to Trace logo]**
 
 ---
 
 ### Scene 2: Introduction (30 seconds)
 
-**[Screen: ComponentCompass interface, clean and simple]**
+**[Screen: Trace interface, clean and simple]**
 
 **Voiceover**:
-"Meet ComponentCompass - an AI agent that knows your design system 
+"Meet Trace - an AI agent that knows your design system 
 better than anyone on your team.
 
 Built with Algolia Agent Studio, it indexes 7 different data sources:
@@ -46,7 +46,7 @@ Let me show you how it works."
 
 **[Screen: Agent response appears with code]**
 
-"ComponentCompass instantly knows I need the destructive variant, 
+"Trace instantly knows I need the destructive variant, 
 provides production-ready code with proper TypeScript types..."
 
 **[Screen: Highlight the code example]**
@@ -72,7 +72,7 @@ provides production-ready code with proper TypeScript types..."
 
 **[Screen: Upload a mockup with buttons and inputs]**
 
-"...and ComponentCompass analyzes it, identifies every component..."
+"...and Trace analyzes it, identifies every component..."
 
 **[Screen: Agent response identifies Button, Input, Card components]**
 
@@ -108,7 +108,7 @@ implement it in React, and links to our design tokens."
 **[Screen: Show architecture diagram]**
 
 **Voiceover**:
-"Under the hood, ComponentCompass uses Algolia's powerful features:
+"Under the hood, Trace uses Algolia's powerful features:
 
 Multi-index retrieval orchestrates searches across 7 specialized indices..."
 
@@ -151,7 +151,7 @@ and keyboard support requirements."
 **[Screen: Ask "where is Button used in production"]**
 
 **Voiceover**:
-"ComponentCompass knows how components are actually used.
+"Trace knows how components are actually used.
 
 It shows me real production usage across all our sites, 
 common prop patterns, and even recent changes."
@@ -164,10 +164,10 @@ common prop patterns, and even recent changes."
 
 ### Scene 9: Call to Action (15 seconds)
 
-**[Screen: ComponentCompass interface with compelling examples]**
+**[Screen: Trace interface with compelling examples]**
 
 **Voiceover**:
-"ComponentCompass: Your design system, conversationally.
+"Trace: Your design system, conversationally.
 
 Built for the Algolia Agent Studio Challenge."
 
@@ -176,7 +176,7 @@ Built for the Algolia Agent Studio Challenge."
 **Text on screen**:
 - 🔗 Live Demo: [URL]
 - 📝 Full Writeup: DEV.to/[username]
-- 💻 GitHub: github.com/[username]/componentcompass
+- 💻 GitHub: github.com/[username]/trace
 
 **[Screen: Fade to black]**
 
@@ -185,11 +185,11 @@ Built for the Algolia Agent Studio Challenge."
 ## DEV.to Submission Post Template
 
 ```markdown
-# ComponentCompass: Your Design System, Conversationally
+# Trace: Your Design System, Conversationally
 
 *Finalist entry for the Algolia Agent Studio Challenge - Consumer-Facing Conversational Experiences*
 
-![ComponentCompass Hero Image](url-to-hero-image.png)
+![Trace Hero Image](url-to-hero-image.png)
 
 ## 🎯 The Problem
 
@@ -209,7 +209,7 @@ a cognitive burden.
 
 ## 💡 The Solution
 
-ComponentCompass is an AI-powered design system navigator built with Algolia Agent Studio. 
+Trace is an AI-powered design system navigator built with Algolia Agent Studio. 
 Instead of searching through scattered documentation, developers and designers have 
 natural conversations to find components, understand patterns, and get production-ready code.
 
@@ -236,7 +236,7 @@ Ask questions in plain English and get complete answers with:
 ### 2. Multimodal Input
 
 **Screenshot Upload**
-Upload a design mockup, and ComponentCompass identifies every component and 
+Upload a design mockup, and Trace identifies every component and 
 generates the code to recreate it.
 
 ![Screenshot: Upload feature](url-to-screenshot-2.png)
@@ -276,7 +276,7 @@ Every code example includes:
 
 ### Architecture Overview
 
-ComponentCompass orchestrates 7 Algolia indices using Agent Studio:
+Trace orchestrates 7 Algolia indices using Agent Studio:
 
 ```
 1. components_index       → Component metadata, props, variants
@@ -295,7 +295,7 @@ Agent Studio's ability to query multiple indices in parallel lets me provide
 complete answers that synthesize information from diverse sources.
 
 **Hybrid Search**
-Combining keyword and vector search ensures ComponentCompass finds the right 
+Combining keyword and vector search ensures Trace finds the right 
 component whether users ask "delete button" or "destructive action trigger."
 
 **Business Rules**
@@ -325,7 +325,7 @@ and continuously improve responses.
 ```typescript
 // System prompt enforces team conventions and accessibility
 const systemPrompt = `
-You are ComponentCompass, an expert on the Flo Labs design system.
+You are Trace, an expert on the Flo Labs design system.
 
 Team Conventions:
 - Primary CTAs → ButtonPrimary variant
@@ -438,7 +438,7 @@ Based on testing with Flo Labs developers:
 > "This is what documentation should be. Just ask and get answers."  
 > — Frontend Developer
 
-> "ComponentCompass knows our design system better than I do."  
+> "Trace knows our design system better than I do."  
 > — Design System Maintainer
 
 ## 🚀 Future Roadmap
@@ -457,15 +457,15 @@ Based on testing with Flo Labs developers:
 ## 🛠️ Try It Yourself
 
 ### Live Demo
-🔗 **[componentcompass-demo.vercel.app](your-url-here)**
+🔗 **[trace-demo.vercel.app](your-url-here)**
 
 ### GitHub
-💻 **[github.com/yourusername/componentcompass](your-repo)**
+💻 **[github.com/yourusername/trace](your-repo)**
 
 ### Local Setup
 ```bash
-git clone https://github.com/yourusername/componentcompass
-cd componentcompass
+git clone https://github.com/yourusername/trace
+cd trace
 npm install
 npm run dev
 ```
@@ -486,11 +486,11 @@ VITE_AGENT_ID=your_agent_id
 ## 📝 Technical Deep Dive
 
 Want more details? Check out my technical writeup:
-🔗 [ComponentCompass Technical Architecture](link-to-github-docs)
+🔗 [Trace Technical Architecture](link-to-github-docs)
 
 ## 🏁 Conclusion
 
-ComponentCompass demonstrates that the future of design systems isn't just 
+Trace demonstrates that the future of design systems isn't just 
 better documentation—it's *conversational intelligence*.
 
 By combining Algolia Agent Studio's powerful retrieval capabilities with 
@@ -535,7 +535,7 @@ Capture these key moments for your submission:
 ### Twitter/X Thread
 
 ```
-🚀 Built ComponentCompass for @algolia's Agent Studio Challenge!
+🚀 Built Trace for @algolia's Agent Studio Challenge!
 
 Your design system, but conversational. Ask questions, get production-ready code with accessibility built-in.
 
@@ -549,7 +549,7 @@ What if you could just *ask*?
 
 [Screenshot: messy browser tabs]
 
-2/ ComponentCompass uses @algolia Agent Studio to create an AI agent that knows your design system inside and out.
+2/ Trace uses @algolia Agent Studio to create an AI agent that knows your design system inside and out.
 
 7 indices. Hybrid search. Context-aware responses.
 
@@ -591,7 +591,7 @@ Feedback welcome! 🙏
 ### LinkedIn Post
 
 ```
-🎉 Excited to share ComponentCompass - my entry for the Algolia Agent Studio Challenge!
+🎉 Excited to share Trace - my entry for the Algolia Agent Studio Challenge!
 
 After years of watching developers struggle with design system documentation, I built an AI agent that makes finding and implementing components as easy as having a conversation.
 

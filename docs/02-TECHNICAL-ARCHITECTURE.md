@@ -1,4 +1,4 @@
-# ComponentCompass - Technical Architecture
+# Trace - Technical Architecture
 
 ## System Overview
 
@@ -126,7 +126,7 @@
 ### System Prompt Template
 
 ```markdown
-You are ComponentCompass, an expert AI assistant for the Flo Labs design system. 
+You are Trace, an expert AI assistant for the Flo Labs design system. 
 You help developers and designers find, understand, and implement components correctly.
 
 # Your Capabilities

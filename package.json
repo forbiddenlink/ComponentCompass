@@ -1,5 +1,5 @@
 {
-  "name": "component-compass",
+  "name": "trace",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -36,7 +36,8 @@
     "react-dom": "^19.2.0",
     "react-markdown": "^10.1.0",
     "tailwind-merge": "^3.4.0",
-    "ts-morph": "^27.0.2"
+    "ts-morph": "^27.0.2",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.9",
@@ -50,6 +51,7 @@
     "@types/node": "^25.9.1",
     "@types/react": "^19.2.5",
     "@types/react-dom": "^19.2.3",
+    "@vercel/node": "^5.8.9",
     "@vitejs/plugin-react": "^5.1.1",
     "@vitest/ui": "^4.0.18",
     "autoprefixer": "^10.4.27",
