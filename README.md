@@ -1,141 +1,86 @@
 # Trace
 
-An AI-powered design system navigator built for the [Algolia Agent Studio Challenge](https://www.algolia.com/blog/ai-agents-challenge/). Trace lets developers discover UI components, explore code implementations, and check accessibility guidelines through natural conversation.
+**Paste a screenshot. Get a real, runnable React component.**
 
-## What It Does
+![Trace demo](docs/demo.gif) <!-- TODO add gif -->
 
-Ask questions in plain English and get comprehensive answers drawn from multiple Algolia indices:
+Live demo: <!-- TODO -->
 
-- **Components** -- Browse the full component catalog with props, variants, and usage guidance
-- **Code** -- Get real shadcn/ui source code with syntax highlighting and one-click copy
-- **Accessibility** -- WCAG AA guidelines, ARIA attributes, keyboard support, and common mistakes
-- **Screenshot Analysis** -- Upload a design mockup and GPT-4 Vision identifies matching components
+## What it does
 
-## How It Works
+Trace turns a UI screenshot into a self-contained React + TypeScript component you can run, edit, and ship. Paste from your clipboard, drop a PNG, or upload a file. Google Gemini recreates the layout as a real component, grounded in a shadcn-style component catalog, and renders it live in an editable sandbox so you can see the result and tweak it on the spot.
+
+## Why it's different
+
+1. **Design-system grounding.** Generation is constrained to a real component catalog (an in-prompt whitelist), so Trace reuses actual components and variants instead of inventing generic markup.
+2. **"What the AI sees" detection panel.** Every detected UI element is mapped to a component, a variant, and a confidence score, so the output is inspectable rather than a black box.
+3. **Live, editable preview.** The component renders in a Sandpack sandbox you can edit in place, not a static screenshot of code.
+4. **Self-repair loop.** Generated code is compile-checked with esbuild and auto-fixed by re-prompting on failure (up to 2 passes). Runtime errors in the preview get a one-click "Ask Trace to fix it" that re-prompts with the error.
+5. **Accessibility score.** axe-core runs against the rendered component for a 0-100 score plus a violations list, with a one-click "Fix accessibility" that re-prompts Gemini to resolve them.
+
+## How it works
 
 ```
-User question
-     |
-     v
-Algolia Agent Studio (gpt-4-turbo)
-     |
-     +---> components_index
-     +---> code_implementations_index
-     +---> accessibility_index
-     |
-     v
-Streamed response with sources
+Screenshot (paste / drop / upload)
+        |
+        v
+Gemini grounded generation  (catalog whitelist in prompt)
+        |
+        v
+Sandpack live render  (editable React + TS)
+        |
+        +--> axe-core accessibility score
+        |
+        +--> esbuild compile check -> self-repair (re-prompt, max 2 passes)
 ```
 
-The Agent Studio agent orchestrates searches across specialized Algolia indices, then synthesizes results into a conversational response streamed to the browser via SSE.
-
-## Quick Start
-
-```bash
-npm install
-cp .env.example .env   # fill in your Algolia credentials
-node scripts/upload-enhanced.mjs
-npm run dev
-```
-
-Open http://localhost:5173
-
-## Environment Variables
-
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `VITE_ALGOLIA_APP_ID` | Yes | Algolia Application ID |
-| `VITE_ALGOLIA_SEARCH_API_KEY` | Yes | Algolia Search API Key |
-| `VITE_ALGOLIA_AGENT_ID` | Yes | Agent Studio Agent ID |
-| `GOOGLE_GENERATIVE_AI_API_KEY` | No | Google Gemini key for screenshot analysis (server-side, used by `/api/vision`) |
-
-## Tech Stack
+## Tech stack
 
 | Layer | Technology |
-|-------|-----------|
-| Framework | React 19, TypeScript 5.9, Vite 7 |
-| Styling | Tailwind CSS 3.4 |
-| AI/Search | Algolia Agent Studio |
-| Streaming | AI SDK 6 (`@ai-sdk/react`) with SSE fallback |
-| Code Display | prism-react-renderer |
-| Vision | Google Gemini (`gemini-2.0-flash`) |
+|-------|------------|
+| Framework | Vite 7, React 19, TypeScript (strict) |
+| Styling | Tailwind CSS (cartographic theme) |
+| AI | `@ai-sdk/google` + `ai` v6, model `gemini-2.5-flash` |
+| Sandbox | `@codesandbox/sandpack-react` |
+| Accessibility | `axe-core` |
+| Validation | `zod` |
+| API | Serverless `api/generate.ts` (Vercel function) + a Vite dev middleware so `/api/generate` works under `pnpm dev` |
+| Search (optional) | Algolia, powering the secondary Chat tab only |
 
-## Project Structure
-
-```
-src/
-  components/
-    ChatInterface.tsx      Main conversational UI
-    CodeBlock.tsx          Syntax highlighting + quick actions
-    ComponentCard.tsx      Interactive component cards
-    FeedbackButtons.tsx    User feedback tracking
-    ErrorBoundary.tsx      Error handling with helpful messages
-    Icons.tsx              20 custom SVG icons
-  services/
-    algolia.ts             Agent Studio client (streaming + SSE fallback)
-    vision.ts              GPT-4 Vision screenshot analysis
-    insights.ts            Algolia Insights tracking
-  lib/
-    env.ts                 Environment validation
-    utils.ts               Utility functions
-  test/
-    setup.ts               Test configuration
-data/                      Algolia index seed data
-scripts/                   Upload and test utilities
-```
-
-## Design
-
-Trace uses a vintage cartographic theme:
-
-- **Parchment** (#F9F6F0) background with map texture
-- **Compass** (#C84B31) accent for interactive elements
-- **Ocean** (#1A535C) for secondary actions
-- **Gold** (#D4AF37) for decorative accents
-- Custom fonts: Fraunces (display), Epilogue (body), JetBrains Mono (code)
-
-## Keyboard Shortcuts
-
-| Shortcut | Action |
-|----------|--------|
-| `Enter` | Send message |
-| `Shift+Enter` | New line |
-| `Cmd+K` | New conversation |
-| `Cmd+E` | Export to Markdown |
-| `Cmd+/` | Toggle session stats |
-
-## Testing
+## Getting started
 
 ```bash
-npm test              # Run all tests
-npm test:ui           # Run tests with UI
-npm test:coverage     # Generate coverage report
+git clone https://github.com/forbiddenlink/trace.git
+cd trace
+pnpm install
 ```
 
-- **24 passing tests** across 4 test suites
-- Unit tests for components, services, and utilities
-- Vitest + React Testing Library
-- Full mocking for API calls and environment
+Set your Gemini key in `.env`:
 
-## Code Quality
+```bash
+GOOGLE_GENERATIVE_AI_API_KEY=your-key-here
+```
 
-- ✅ **Zero ESLint errors** - Strict TypeScript configuration
-- ✅ **WCAG 2.1 AA compliant** - Full accessibility support
-- ✅ **Optimized bundle** - Code splitting reduces initial load by 67%
-- ✅ **Type-safe** - Strict mode enabled throughout
-- ✅ **Tested** - 24/24 tests passing
+This is the **only** required key. The Algolia `VITE_ALGOLIA_*` variables are optional and only enable the secondary Chat tab; the app boots and the Studio and Explore tabs work without them.
 
-See `IMPROVEMENTS.md` for detailed list of optimizations and `ACCESSIBILITY.md` for accessibility compliance.
+```bash
+pnpm dev
+```
 
-## Contest Criteria
+Open http://localhost:5173.
 
-| Criteria | Weight | Implementation |
-|----------|--------|----------------|
-| Use of Technology | 40% | Multi-index Agent Studio orchestration, streaming SSE, real shadcn/ui data |
-| UX | 25% | Responsive design, loading states, session persistence, conversation export |
-| Creativity | 20% | Cartographic theme, 20 custom SVG icons, screenshot-to-component workflow |
-| Innovation | 15% | Multimodal AI (text + vision), contextual follow-up suggestions, code quick actions |
+## Try it with no key
 
----
+Trace ships with an example gallery: four preloaded UIs (pricing card, login form, dashboard stat cards, navigation sidebar) with cached generation results. Click any thumbnail on the Studio empty state to load a full result (detection panel, live preview, accessibility score) with **no API key and no network call**. It is the fastest way to see what Trace does.
 
-Built by Elizabeth Stein for the Algolia Agent Studio Challenge -- February 2026
+## Accessibility
+
+Every rendered component is scored with axe-core (0-100) and its violations are listed inline. "Fix accessibility" re-prompts Gemini to resolve the reported issues. The automated check catches roughly half of WCAG issues, so treat the score as a directional signal rather than a certification. The app's own UI uses semantic landmarks, ARIA tabs, keyboard navigation, and visible focus styles.
+
+## Background
+
+Trace began as a component-search chatbot (ComponentCompass) for the Algolia Agent Studio Challenge in February 2026, was shelved, then revived and reframed for the DEV.to GitHub Finish-Up-A-Thon and renamed to Trace. The Algolia chatbot survives as the optional Chat tab. Read the story: <!-- TODO post URL -->
+
+## License
+
+MIT - Liz Stein, 2026. See [LICENSE](LICENSE).

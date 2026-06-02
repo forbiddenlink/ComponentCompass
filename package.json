@@ -69,7 +69,7 @@
     "vite": "^7.3.2",
     "vitest": "^4.0.18"
   },
-  "description": "AI-powered design system navigator for discovering UI components through natural conversation",
+  "description": "Paste a screenshot, get a real, runnable React component. AI screenshot-to-component with design-system grounding, live preview, self-repair, and an accessibility score.",
   "license": "MIT",
   "pnpm": {
     "overrides": {
