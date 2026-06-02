@@ -417,17 +417,18 @@ function useStudioTheme(): [boolean, () => void] {
     if (typeof window === 'undefined') return false;
     return window.localStorage.getItem(THEME_STORAGE_KEY) === 'dark';
   });
-  const toggle = useCallback(() => {
-    setDark((prev) => {
-      const next = !prev;
-      try {
-        window.localStorage.setItem(THEME_STORAGE_KEY, next ? 'dark' : 'light');
-      } catch {
-        // localStorage may be unavailable (private mode); fail silently.
-      }
-      return next;
-    });
-  }, []);
+  // Persist as a post-commit side effect keyed on the committed value. Writing inside
+  // the setDark updater is unsafe: StrictMode double-invokes updaters, so a single
+  // toggle wrote twice (the second pass reading the already-flipped `prev`) and left
+  // localStorage on the wrong value even though the visible state was correct.
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(THEME_STORAGE_KEY, dark ? 'dark' : 'light');
+    } catch {
+      // localStorage may be unavailable (private mode); fail silently.
+    }
+  }, [dark]);
+  const toggle = useCallback(() => setDark((prev) => !prev), []);
   return [dark, toggle];
 }
 
@@ -891,13 +892,20 @@ export function ScreenshotStudio() {
         errorMessage: string;
         repairReason?: 'compile' | 'a11y' | 'refine';
       },
+      // A fresh generation can opt into non-destructive failure handling: the prior
+      // result/image stay on screen through loading + on error (matching the repair
+      // path), and the destructive swap to the new image only commits on success.
+      // Used by re-trace-with-notes so a transient failure never wipes the rendered
+      // component AND the user's drawn annotations.
+      options?: { nonDestructive?: boolean; onSuccess?: () => void },
     ) => {
       // A repair runs on top of an existing result: keep the prior result/code on
       // screen (non-destructive) so a transient failure never wipes the user's work.
       const isRepair = Boolean(repair);
+      const nonDestructive = isRepair || Boolean(options?.nonDestructive);
       setStatus('loading');
       setError(null);
-      if (!isRepair) {
+      if (!nonDestructive) {
         setResult(null);
         setImageUrl(dataUrl);
         // A fresh generation resets the refine chain + its drift counter.
@@ -917,10 +925,17 @@ export function ScreenshotStudio() {
         const data: GenResult = await res.json();
         // Cross-fade the loading plotter → result frames where supported.
         withViewTransition(() => {
+          // A non-destructive FRESH generation (re-trace) defers the destructive
+          // resets to here so they only land once the new result is in hand.
+          if (!isRepair && nonDestructive) {
+            setImageUrl(dataUrl);
+            setRefineCount(0);
+          }
           setResult(data);
           setCode(data.jsx);
           setStatus('ready');
         });
+        options?.onSuccess?.();
       } catch (err) {
         // Friendly copy only. If a result already exists, keep it visible and show a
         // dismissible banner instead of dumping the user back to the empty dropzone.
@@ -1141,9 +1156,16 @@ export function ScreenshotStudio() {
     // The stroke canvas is sized to the DISPLAYED image; rescale to natural pixels.
     ctx.drawImage(strokeCanvas, 0, 0, strokeCanvas.width, strokeCanvas.height, 0, 0, out.width, out.height);
     const composited = out.toDataURL('image/png');
-    setAnnotating(false);
-    clearAnnotations();
-    await generate(composited);
+    // Non-destructive: keep the prior result + the drawn annotations on screen while
+    // tracing and on failure (friendly error banner instead of the empty dropzone).
+    // Only on success do we leave annotate mode and clear the strokes.
+    await generate(composited, undefined, {
+      nonDestructive: true,
+      onSuccess: () => {
+        setAnnotating(false);
+        clearAnnotations();
+      },
+    });
   }, [generate, clearAnnotations]);
 
   const handleFile = useCallback(
