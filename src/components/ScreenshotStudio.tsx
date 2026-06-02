@@ -756,7 +756,7 @@ function EmptyState({
         <span className="annotate text-ocean">the method</span>
         <div className="mt-5 grid gap-px sm:grid-cols-3 sm:divide-x sm:divide-line-soft">
           {[
-            ['01', 'Capture', 'Hand Trace any interface screenshot — paste, drop, or upload.'],
+            ['01', 'Capture', 'Trace any interface screenshot. Paste, drop, or upload.'],
             ['02', 'Detect', 'Each element is mapped to a catalog component, with a confidence reading and an honest grounding tag.'],
             ['03', 'Render', 'A real, editable React component renders live in a sandbox, scored for accessibility.'],
           ].map(([n, title, desc], i) => (
@@ -858,6 +858,17 @@ export function ScreenshotStudio() {
   const [code, setCode] = useState<string>('');
   const [isDragging, setIsDragging] = useState(false);
   const [isFixing, setIsFixing] = useState(false);
+  // Feature 1 — refine-with-a-prompt: the current instruction text and how many
+  // sequential refines have been applied to this result (drift guard).
+  const [refineInstruction, setRefineInstruction] = useState('');
+  const [refineCount, setRefineCount] = useState(0);
+  const refineInputRef = useRef<HTMLTextAreaElement>(null);
+  // Feature 3 — draw-to-instruct: whether the annotate canvas is active over the
+  // source frame, and a ref to the source <img> so we can size/composite it.
+  const [annotating, setAnnotating] = useState(false);
+  const sourceImgRef = useRef<HTMLImageElement>(null);
+  const annotationCanvasRef = useRef<HTMLCanvasElement>(null);
+  const [hasStrokes, setHasStrokes] = useState(false);
   const [rightView, setRightView] = useState<'code' | 'compare'>('code');
   const [dark, toggleDark] = useStudioTheme();
   const [hoveredDetectionId, setHoveredDetectionId] = useState<string | null>(null);
@@ -875,7 +886,11 @@ export function ScreenshotStudio() {
   const generate = useCallback(
     async (
       dataUrl: string,
-      repair?: { previousJsx: string; errorMessage: string; repairReason?: 'compile' | 'a11y' },
+      repair?: {
+        previousJsx: string;
+        errorMessage: string;
+        repairReason?: 'compile' | 'a11y' | 'refine';
+      },
     ) => {
       // A repair runs on top of an existing result: keep the prior result/code on
       // screen (non-destructive) so a transient failure never wipes the user's work.
@@ -885,6 +900,8 @@ export function ScreenshotStudio() {
       if (!isRepair) {
         setResult(null);
         setImageUrl(dataUrl);
+        // A fresh generation resets the refine chain + its drift counter.
+        setRefineCount(0);
       }
       try {
         const res = await fetch('/api/generate', {
@@ -937,6 +954,8 @@ export function ScreenshotStudio() {
     setCode(example.result.jsx);
     setRightView('code');
     setStatus('ready');
+    setRefineCount(0);
+    setRefineInstruction('');
     // Convert the example PNG to a base64 data URL so "Fix accessibility" and runtime
     // auto-fix can POST it to /api/generate (which rejects non-`data:` URLs). The cached
     // result is still shown instantly above; this just upgrades imageUrl in the background.
@@ -978,6 +997,154 @@ export function ScreenshotStudio() {
     },
     [imageUrl, code, generate],
   );
+
+  /**
+   * Feature 1 — refine with a prompt: re-prompt the model to APPLY a user change
+   * request to the current component (repairReason 'refine'). Non-destructive: the
+   * prior result stays on screen on error (shared `generate` repair path). Bumps the
+   * drift counter so the UI can nudge "start fresh" after a long edit chain.
+   */
+  const handleRefine = useCallback(
+    async (rawInstruction: string) => {
+      const instruction = rawInstruction.trim();
+      if (!imageUrl || !code || !instruction) return;
+      setIsFixing(true);
+      try {
+        await generate(imageUrl, {
+          previousJsx: code,
+          errorMessage: instruction,
+          repairReason: 'refine',
+        });
+        setRefineCount((n) => n + 1);
+        setRefineInstruction('');
+      } finally {
+        setIsFixing(false);
+      }
+    },
+    [imageUrl, code, generate],
+  );
+
+  /**
+   * Feature 2 — confidence-graded refine target: pre-fill the refine input with a
+   * change request aimed at a single low-confidence detection, then focus it so the
+   * user confirms/edits before submitting (fuses detection + uncertainty + refine).
+   */
+  const requestRefineForDetection = useCallback((d: Detection) => {
+    setRefineInstruction(
+      `Improve the ${d.label}. It was a low-confidence ${d.grounding ?? 'guess'}.`,
+    );
+    // Focus on the next frame so the textarea is mounted/visible first.
+    requestAnimationFrame(() => {
+      const el = refineInputRef.current;
+      if (el) {
+        el.focus();
+        el.setSelectionRange(el.value.length, el.value.length);
+      }
+    });
+  }, []);
+
+  /**
+   * Feature 3 — draw-to-instruct: free-draw in vermilion on a transparent canvas
+   * sized to the displayed source image. Pointer events cover mouse + touch + pen.
+   * Strokes are kept purely on the canvas; they are only baked into pixels when the
+   * user re-traces (composited over the original image).
+   */
+  const setupCanvas = useCallback(() => {
+    const canvas = annotationCanvasRef.current;
+    const img = sourceImgRef.current;
+    if (!canvas || !img) return;
+    // Match the canvas backing store to the DISPLAYED image size so a stroke lands
+    // where the pointer is. Compositing later rescales to natural resolution.
+    const rect = img.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return;
+    canvas.width = Math.round(rect.width);
+    canvas.height = Math.round(rect.height);
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      ctx.strokeStyle = '#C5482E';
+      ctx.lineWidth = 3;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+    }
+  }, []);
+
+  // Size the canvas when annotate turns on (and on resize while active).
+  useEffect(() => {
+    if (!annotating) return;
+    setupCanvas();
+    window.addEventListener('resize', setupCanvas);
+    return () => window.removeEventListener('resize', setupCanvas);
+  }, [annotating, setupCanvas]);
+
+  const drawing = useRef(false);
+  const lastPoint = useRef<{ x: number; y: number } | null>(null);
+
+  const pointFromEvent = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    const canvas = annotationCanvasRef.current;
+    if (!canvas) return null;
+    const rect = canvas.getBoundingClientRect();
+    return {
+      x: ((e.clientX - rect.left) / rect.width) * canvas.width,
+      y: ((e.clientY - rect.top) / rect.height) * canvas.height,
+    };
+  };
+
+  const onCanvasPointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    e.preventDefault();
+    const pt = pointFromEvent(e);
+    if (!pt) return;
+    drawing.current = true;
+    lastPoint.current = pt;
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+
+  const onCanvasPointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (!drawing.current) return;
+    const ctx = annotationCanvasRef.current?.getContext('2d');
+    const pt = pointFromEvent(e);
+    if (!ctx || !pt || !lastPoint.current) return;
+    ctx.beginPath();
+    ctx.moveTo(lastPoint.current.x, lastPoint.current.y);
+    ctx.lineTo(pt.x, pt.y);
+    ctx.stroke();
+    lastPoint.current = pt;
+    if (!hasStrokes) setHasStrokes(true);
+  };
+
+  const onCanvasPointerUp = () => {
+    drawing.current = false;
+    lastPoint.current = null;
+  };
+
+  const clearAnnotations = useCallback(() => {
+    const canvas = annotationCanvasRef.current;
+    const ctx = canvas?.getContext('2d');
+    if (canvas && ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+    setHasStrokes(false);
+  }, []);
+
+  /**
+   * Composite the original source image + the annotation strokes into one PNG data
+   * URL (image first, marks on top), then run a FRESH generation on it. The base
+   * prompt instructs the model to treat red/vermilion marks as instructions.
+   */
+  const handleRetraceWithNotes = useCallback(async () => {
+    const img = sourceImgRef.current;
+    const strokeCanvas = annotationCanvasRef.current;
+    if (!img || !strokeCanvas || !img.naturalWidth) return;
+    const out = document.createElement('canvas');
+    out.width = img.naturalWidth;
+    out.height = img.naturalHeight;
+    const ctx = out.getContext('2d');
+    if (!ctx) return;
+    ctx.drawImage(img, 0, 0, out.width, out.height);
+    // The stroke canvas is sized to the DISPLAYED image; rescale to natural pixels.
+    ctx.drawImage(strokeCanvas, 0, 0, strokeCanvas.width, strokeCanvas.height, 0, 0, out.width, out.height);
+    const composited = out.toDataURL('image/png');
+    setAnnotating(false);
+    clearAnnotations();
+    await generate(composited);
+  }, [generate, clearAnnotations]);
 
   const handleFile = useCallback(
     async (file: File) => {
@@ -1026,6 +1193,10 @@ export function ScreenshotStudio() {
     setResult(null);
     setCode('');
     setSourceDims(null);
+    setRefineInstruction('');
+    setRefineCount(0);
+    setAnnotating(false);
+    setHasStrokes(false);
   };
 
   // Keep the workspace mounted whenever there is work to preserve: while loading,
@@ -1137,13 +1308,34 @@ export function ScreenshotStudio() {
             <aside className="flex flex-col">
               <div className="flex items-center justify-between mb-2">
                 <span className="annotate text-ocean">source</span>
-                <button
-                  type="button"
-                  onClick={reset}
-                  className="annotate text-muted hover:text-ink"
-                >
-                  + new
-                </button>
+                <div className="flex items-center gap-3">
+                  {imageUrl && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAnnotating((v) => {
+                          if (v) clearAnnotations();
+                          return !v;
+                        });
+                      }}
+                      aria-pressed={annotating}
+                      // Hidden on small screens — drawing is a fiddly desktop affordance.
+                      className={cn(
+                        'hidden sm:inline annotate hover:text-ink',
+                        annotating ? 'text-compass' : 'text-muted',
+                      )}
+                    >
+                      {annotating ? '✓ annotating' : '✎ annotate'}
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={reset}
+                    className="annotate text-muted hover:text-ink"
+                  >
+                    + new
+                  </button>
+                </div>
               </div>
               <div
                 className={cn(
@@ -1154,6 +1346,7 @@ export function ScreenshotStudio() {
                 {imageUrl ? (
                   <div className="relative bg-white border-hair border-line-soft">
                     <img
+                      ref={sourceImgRef}
                       src={imageUrl}
                       alt="Uploaded screenshot"
                       className="w-full object-contain"
@@ -1162,11 +1355,26 @@ export function ScreenshotStudio() {
                         if (img.naturalWidth && img.naturalHeight) {
                           setSourceDims({ w: img.naturalWidth, h: img.naturalHeight });
                         }
+                        if (annotating) setupCanvas();
                       }}
                     />
+                    {/* Feature 3 — annotation canvas overlay. Sized to the displayed
+                        image; vermilion free-draw. Only mounted while annotating. */}
+                    {annotating && (
+                      <canvas
+                        ref={annotationCanvasRef}
+                        onPointerDown={onCanvasPointerDown}
+                        onPointerMove={onCanvasPointerMove}
+                        onPointerUp={onCanvasPointerUp}
+                        onPointerLeave={onCanvasPointerUp}
+                        className="absolute inset-0 z-10 h-full w-full cursor-crosshair touch-none"
+                        style={{ touchAction: 'none' }}
+                      />
+                    )}
                     {/* Bounding boxes — positioned in PERCENT so they scale with the image.
-                        Gemini boxes are [ymin, xmin, ymax, xmax] normalized 0-1000. */}
-                    {status === 'ready' &&
+                        Gemini boxes are [ymin, xmin, ymax, xmax] normalized 0-1000.
+                        Hidden while annotating so they don't fight the draw layer. */}
+                    {status === 'ready' && !annotating &&
                       boxedDetections.map(({ d, i }) => {
                         const id = detectionId(i);
                         const [ymin, xmin, ymax, xmax] = d.box as number[];
@@ -1220,6 +1428,33 @@ export function ScreenshotStudio() {
                   </div>
                 )}
               </div>
+              {/* Feature 3 — annotate controls: hint + clear + re-trace with notes. */}
+              {annotating && (
+                <div className="mt-3 flex flex-col gap-2 border-hair border-compass/40 bg-compass/[0.04] px-3 py-2.5">
+                  <p className="text-[11px] text-graphite leading-relaxed">
+                    Draw notes or arrows. Anything you draw is treated as an instruction,
+                    not part of the UI.
+                  </p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      disabled={isFixing || status === 'loading' || !hasStrokes}
+                      onClick={() => void handleRetraceWithNotes()}
+                      className="px-3 py-1.5 rounded bg-compass text-white text-xs font-display font-semibold hover:bg-compass-dark focus:outline-none focus:ring-2 focus:ring-compass/40 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {status === 'loading' ? 'Tracing…' : 'Re-trace with notes'}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={!hasStrokes}
+                      onClick={clearAnnotations}
+                      className="px-3 py-1.5 rounded border-hair border-line-strong text-ink text-xs font-display font-semibold hover:bg-ink/5 focus:outline-none focus:ring-2 focus:ring-compass/40 disabled:opacity-40"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                </div>
+              )}
               {status === 'loading' && (
                 <div className="mt-3 flex items-center gap-2.5 text-graphite text-small">
                   <div className="w-4 h-4 border-2 border-compass border-t-transparent rounded-full animate-spin" />
@@ -1400,6 +1635,29 @@ export function ScreenshotStudio() {
                               </div>
                               {d.grounding && <GroundingTag grounding={d.grounding} />}
                             </div>
+                            {/* Feature 2 — confidence-graded refine: low-confidence
+                                detections get a one-click fix that pre-fills the refine
+                                input. Fuses detection + uncertainty + refine. */}
+                            {(d.grounding === 'guessed' || d.grounding === 'inferred') && (
+                              <div className="mt-2 flex items-center justify-between gap-2">
+                                <span className="annotate normal-case tracking-normal text-muted">
+                                  {d.grounding === 'guessed'
+                                    ? "Trace wasn't sure"
+                                    : 'some uncertainty'}
+                                </span>
+                                <button
+                                  type="button"
+                                  disabled={isFixing}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    requestRefineForDetection(d);
+                                  }}
+                                  className="font-mono text-[10px] text-compass underline underline-offset-2 hover:text-compass-dark focus:outline-none focus:ring-2 focus:ring-compass/40 rounded disabled:opacity-50"
+                                >
+                                  refine →
+                                </button>
+                              </div>
+                            )}
                           </li>
                         );
                       })}
@@ -1407,6 +1665,57 @@ export function ScreenshotStudio() {
                         <li className="px-4 py-3 text-small text-muted">No components detected.</li>
                       )}
                     </ul>
+
+                    {/* Feature 1 — refine with a prompt. Describe a change; Trace
+                        re-prompts the model to apply it, non-destructively. */}
+                    {status !== 'loading' && (
+                      <div className="px-4 py-3.5 border-t-hair border-line-default flex flex-col gap-2">
+                        <div className="flex items-center justify-between">
+                          <span className="annotate text-ocean">refine</span>
+                          {refineCount > 0 && (
+                            <span className="font-mono text-[10px] tabular-nums text-muted">
+                              {refineCount} edit{refineCount === 1 ? '' : 's'}
+                            </span>
+                          )}
+                        </div>
+                        <textarea
+                          ref={refineInputRef}
+                          value={refineInstruction}
+                          onChange={(e) => setRefineInstruction(e.target.value)}
+                          onKeyDown={(e) => {
+                            // Cmd/Ctrl+Enter submits; plain Enter keeps a newline.
+                            if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+                              e.preventDefault();
+                              if (!isFixing) void handleRefine(refineInstruction);
+                            }
+                          }}
+                          rows={2}
+                          disabled={isFixing}
+                          placeholder="Describe a change, e.g. make the primary button green and stack the form on mobile"
+                          className="w-full resize-y rounded border-hair border-line-strong bg-warm-white px-2.5 py-2 text-xs text-ink placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-compass/40 disabled:opacity-60"
+                        />
+                        <button
+                          type="button"
+                          disabled={isFixing || !refineInstruction.trim()}
+                          onClick={() => void handleRefine(refineInstruction)}
+                          className="self-start px-3 py-1.5 rounded bg-compass text-white text-xs font-display font-semibold hover:bg-compass-dark focus:outline-none focus:ring-2 focus:ring-compass/40 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {isFixing ? 'Refining…' : 'Refine'}
+                        </button>
+                        {refineCount >= 5 && (
+                          <p className="text-[11px] text-graphite leading-relaxed">
+                            Edits can drift over a long chain.{' '}
+                            <button
+                              type="button"
+                              onClick={reset}
+                              className="text-compass underline underline-offset-2 hover:text-compass-dark"
+                            >
+                              Start fresh?
+                            </button>
+                          </p>
+                        )}
+                      </div>
+                    )}
 
                     {result.componentsUsed.length > 0 && (
                       <div className="px-4 py-3 border-t-hair border-line-default">

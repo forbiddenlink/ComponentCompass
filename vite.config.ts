@@ -58,7 +58,12 @@ function devApiPlugin(): PluginOption {
               ? {
                   previousJsx,
                   errorMessage,
-                  repairReason: repairReason === 'a11y' ? 'a11y' : 'compile',
+                  repairReason:
+                    repairReason === 'a11y'
+                      ? 'a11y'
+                      : repairReason === 'refine'
+                        ? 'refine'
+                        : 'compile',
                 }
               : undefined
           const mod = await server.ssrLoadModule('/api/generate.ts')

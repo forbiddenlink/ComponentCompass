@@ -67,9 +67,10 @@ export interface RepairContext {
   errorMessage?: string;
   /**
    * What kind of fix this is. 'compile' (default) frames the issues as a compile/runtime
-   * failure; 'a11y' frames them as accessibility issues to fix while preserving the design.
+   * failure; 'a11y' frames them as accessibility issues to fix while preserving the design;
+   * 'refine' frames the errorMessage as a USER CHANGE REQUEST to apply to the component.
    */
-  repairReason?: 'compile' | 'a11y';
+  repairReason?: 'compile' | 'a11y' | 'refine';
 }
 
 /* Inlined from data/components_index_enhanced.json. Defined here (not imported) so the
@@ -244,6 +245,11 @@ STRICT RULES for the generated "jsx":
   placeholders / Tailwind backgrounds or lucide icons instead).
 - Keep it accessible: real button/label/input elements, sensible aria where helpful.
 
+If the image contains hand-drawn marks (arrows, scribbles, circles, or text) in
+red/vermilion ink, treat those marks as INSTRUCTIONS from the user about what to
+change or emphasize — NOT as UI to reproduce. Apply the instruction and do not
+render the marks themselves.
+
 Put the catalog names you leaned on in "componentsUsed", and a short rationale in "notes".
 
 CATALOG WHITELIST (recreate using these patterns/variants where possible):
@@ -256,7 +262,7 @@ ${buildCatalogPrompt()}`;
 function buildRepairPrompt(
   previousJsx: string,
   errorMessage: string,
-  reason: 'compile' | 'a11y' = 'compile',
+  reason: 'compile' | 'a11y' | 'refine' = 'compile',
 ): string {
   const framing =
     reason === 'a11y'
@@ -265,7 +271,14 @@ them while KEEPING the same visual design, layout, and styling unchanged:
 ---ISSUES---
 ${errorMessage}
 ---END ISSUES---`
-      : `REPAIR PASS: The previous attempt below FAILED to compile with this error:
+      : reason === 'refine'
+        ? `REFINE PASS: Apply this requested change to the component while keeping
+everything else intact and obeying all the original rules (only react +
+lucide-react, Tailwind, default-export App):
+---CHANGE REQUEST---
+${errorMessage}
+---END CHANGE REQUEST---`
+        : `REPAIR PASS: The previous attempt below FAILED to compile with this error:
 ---ERROR---
 ${errorMessage}
 ---END ERROR---`;
@@ -460,8 +473,8 @@ export async function generateFromScreenshot(
  * Body: {
  *   imageDataUrl: string,          // a data:<mime>;base64,<payload> URL
  *   previousJsx?: string,          // optional: prior jsx to repair (targeted repair)
- *   errorMessage?: string,         // optional: compile/runtime error OR a11y issues for previousJsx
- *   repairReason?: 'compile' | 'a11y', // optional: how to frame the repair (default 'compile')
+ *   errorMessage?: string,         // optional: compile/runtime error, a11y issues, OR a user change request for previousJsx
+ *   repairReason?: 'compile' | 'a11y' | 'refine', // optional: how to frame the repair (default 'compile')
  * }
  * Returns: GenResult JSON ({ detections, jsx, componentsUsed, notes, repairs }).
  */
@@ -505,7 +518,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       ? {
           previousJsx,
           errorMessage,
-          repairReason: repairReason === 'a11y' ? ('a11y' as const) : ('compile' as const),
+          repairReason:
+            repairReason === 'a11y'
+              ? ('a11y' as const)
+              : repairReason === 'refine'
+                ? ('refine' as const)
+                : ('compile' as const),
         }
       : undefined;
 
