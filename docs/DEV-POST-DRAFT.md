@@ -68,19 +68,13 @@ Before: a search chatbot that could not even render a component, abandoned for m
 
 ## My Experience with GitHub Copilot
 
-<!--
-TODO Liz: replace this section with 2-3 SPECIFIC, verifiable moments. Generic praise scores worst (it is the #1 weakness across the field). Name the feature and show one real prompt + diff or screenshot. Ideas to capture while you finish the polish work:
+I tried to keep this part concrete, because "Copilot helped a lot" is not very useful.
 
-1. Agent mode for a multi-file change. Example: "I used Copilot agent mode to thread the repairReason field from the Studio UI through the serverless handler and the dev middleware into the core generate function. It touched four files; I reviewed each edit and rejected the one that ___."
+The best example was Agent mode on a real multi-file task. I asked it to add test coverage for the new Screenshot Studio features: Vitest coverage for the `friendlyError`, confidence, and grounding logic, plus a Playwright test that loads a gallery example and proves the bounding boxes, trace lines, and accessibility panel render. That change ended up touching `src/components/ScreenshotStudio.tsx`, a new `src/components/ScreenshotStudio.logic.ts`, a new `src/components/ScreenshotStudio.test.tsx`, `src/components/TraceLines.tsx`, and `e2e/app.spec.ts`. It was a good use of Copilot because it was real engineering work, not just autocomplete: it had to follow the existing test patterns, update stale selectors in the e2e suite, and keep the assertions stable enough to pass.
 
-2. A /fix or inline fix on a real bug. Example: "Copilot caught that the axe-core postMessage from the sandboxed iframe never reaches the parent window, and suggested routing through Sandpack's console channel instead." (Only claim this if it actually happened on your machine.)
+I also used it on a smaller inline cleanup. React 19 deprecated the old `MutableRefObject` typing pattern I had in `TraceLines.tsx`, so I took the Copilot-assisted fix there too and switched those props to the current ref type. That is not a flashy change, but it is exactly the kind of maintenance work that helps me move faster without ignoring real warnings in the codebase.
 
-3. A place you OVERRODE Copilot. Judges trust this more than praise. Example: "Copilot wanted to pull the full component catalog into the prompt. I overrode it and capped the catalog at 40 entries to control tokens."
-
-Include one screenshot of Copilot chat or an inline suggestion, and one short before/after diff.
--->
-
-TODO: 2 to 3 specific Copilot moments (see the comment above for structure and candidates). Show one prompt, one diff, one screenshot. Name the feature you used: agent mode, /fix, inline completion, or custom instructions.
+The most important Copilot moment, though, was where I did **not** take the obvious bigger suggestion. A common AI instinct on the grounding problem is "stuff more data into the prompt" or "add a vector database." I rejected that. In `api/generate.ts` I deliberately keep the catalog grounded in-prompt and cap it with `MAX_CATALOG = 40`. That keeps token cost under control, keeps the demo credential-free, and preserves the core product idea: Trace should work with a small, explicit design-system whitelist, not require more infrastructure just to make the story sound more impressive. Copilot was useful here, but only because I treated it as a collaborator to review, not an authority to obey.
 
 ---
 
