@@ -189,12 +189,55 @@ import { createRoot } from 'react-dom/client';
 import App from './App';
 import './a11y';
 
-const el = document.getElementById('root');
-if (el) {
-  createRoot(el).render(
-    <StrictMode>
-      <App />
-    </StrictMode>,
-  );
+// Tailwind: the Play CDN is a <script>, not a stylesheet. Sandpack's
+// \`externalResources\` injects bare URLs as <link> tags (so Tailwind never
+// initialized and utility classes did nothing) and a custom /public/index.html
+// is ignored by the runtime bundler. The reliable path is to inject the Play CDN
+// <script> into the preview iframe's own <head> from the entry, which runs inside
+// the iframe. We seed \`tailwind.config\` with the cartographic theme tokens the
+// catalog components use, then render once Tailwind has finished its first pass.
+function loadTailwind(): Promise<void> {
+  if (document.getElementById('trace-tailwind-cdn')) return Promise.resolve();
+  (window as unknown as { tailwind?: { config?: unknown } }).tailwind = {
+    config: {
+      theme: {
+        extend: {
+          colors: {
+            parchment: '#F9F6F0',
+            'warm-white': '#FFFAF3',
+            ink: '#2C3E50',
+            'deep-charcoal': '#1A1D23',
+            muted: '#7A8B8C',
+            compass: { DEFAULT: '#C84B31', dark: '#A63D2A', light: '#D85740' },
+            ocean: { DEFAULT: '#1A535C', dark: '#14424A', light: '#E8F4F5' },
+            terrain: { DEFAULT: '#4E6E58', dark: '#3D5246', light: '#EDF3EF' },
+            gold: { DEFAULT: '#D4AF37', muted: '#F9E5C7', light: '#FDF8E8' },
+          },
+        },
+      },
+    },
+  };
+  return new Promise((resolve) => {
+    const s = document.createElement('script');
+    s.id = 'trace-tailwind-cdn';
+    s.src = 'https://cdn.tailwindcss.com';
+    // Resolve on load or error so a CDN hiccup never blocks the render.
+    s.onload = () => resolve();
+    s.onerror = () => resolve();
+    document.head.appendChild(s);
+  });
 }
+
+function mount() {
+  const el = document.getElementById('root');
+  if (el) {
+    createRoot(el).render(
+      <StrictMode>
+        <App />
+      </StrictMode>,
+    );
+  }
+}
+
+void loadTailwind().then(mount);
 `;

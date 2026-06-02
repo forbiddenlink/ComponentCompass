@@ -717,9 +717,12 @@ export function ScreenshotStudio() {
                     '/a11y.ts': { code: A11Y_RUNNER_SOURCE, hidden: true },
                     // Custom entry: renders App AND imports the runner. Overriding /index.tsx
                     // is what makes the runner execute (Sandpack's react-ts entry is /index.tsx).
+                    // Custom entry also injects the Tailwind Play CDN <script> into the
+                    // iframe <head> at runtime (see A11Y_ENTRY_SOURCE). The Play CDN is a
+                    // <script>, not a stylesheet, so `externalResources` (which injects bare
+                    // URLs as <link> tags) left utility classes inert — hence no Tailwind here.
                     '/index.tsx': { code: A11Y_ENTRY_SOURCE, hidden: true },
                   }}
-                  options={{ externalResources: ['https://cdn.tailwindcss.com'] }}
                   customSetup={{ dependencies: { 'lucide-react': 'latest', 'axe-core': 'latest' } }}
                 >
                   {/* Toolbar: view toggle + export actions */}
