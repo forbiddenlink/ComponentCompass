@@ -11,6 +11,7 @@ import { ReactCompareSlider, ReactCompareSliderImage } from 'react-compare-slide
 import { cn } from '../lib/utils';
 import { imageToBase64 } from '../services/vision';
 import { GALLERY_EXAMPLES } from '../data/gallery';
+import { TraceLines } from './TraceLines';
 import {
   A11Y_ENTRY_SOURCE,
   A11Y_RUNNER_SOURCE,
@@ -26,6 +27,9 @@ interface Detection {
   componentName: string;
   variant?: string;
   confidence: number;
+  /** [ymin, xmin, ymax, xmax] normalized 0-1000 (y first). Absent on older cached results. */
+  box?: number[];
+  grounding?: 'grounded' | 'inferred' | 'guessed';
 }
 
 interface GenResult {
@@ -120,6 +124,37 @@ function ConfidenceBar({ value }: { value: number }) {
       </div>
       <span className="text-[11px] font-mono tabular-nums text-graphite w-9 text-right">{pct}%</span>
     </div>
+  );
+}
+
+/**
+ * Honest mapping band for a detection: grounded / inferred / guessed. A tiny
+ * mono chip in the inspector — guessed reads as the loudest (vermilion) so
+ * uncertainty is visible, not hidden.
+ */
+function GroundingTag({ grounding }: { grounding: 'grounded' | 'inferred' | 'guessed' }) {
+  const styles =
+    grounding === 'grounded'
+      ? 'border-terrain/40 text-terrain'
+      : grounding === 'inferred'
+        ? 'border-ocean/40 text-ocean'
+        : 'border-compass/50 text-compass border-dashed';
+  return (
+    <span
+      className={cn(
+        'flex-shrink-0 rounded-sm border-hair px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider',
+        styles,
+      )}
+      title={
+        grounding === 'grounded'
+          ? 'Maps cleanly to a catalog component.'
+          : grounding === 'inferred'
+            ? 'Reasonable mapping with some uncertainty.'
+            : 'Low confidence / no good catalog match.'
+      }
+    >
+      {grounding}
+    </span>
   );
 }
 
@@ -432,7 +467,14 @@ export function ScreenshotStudio() {
   const [isFixing, setIsFixing] = useState(false);
   const [rightView, setRightView] = useState<'code' | 'compare'>('code');
   const [dark, toggleDark] = useStudioTheme();
+  const [hoveredDetectionId, setHoveredDetectionId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Trace-line plumbing: the workspace is the SVG coord space; box/row refs are the
+  // line endpoints; previewRef is where lines terminate.
+  const workspaceRef = useRef<HTMLDivElement>(null);
+  const previewRef = useRef<HTMLElement>(null);
+  const boxRefs = useRef<Map<string, HTMLElement | null>>(new Map());
+  const rowRefs = useRef<Map<string, HTMLElement | null>>(new Map());
 
   const generate = useCallback(
     async (
@@ -592,6 +634,20 @@ export function ScreenshotStudio() {
   const hasResult = result !== null && code !== '';
   const showWorkspace = status === 'loading' || status === 'ready' || (status === 'error' && hasResult);
 
+  // Stable id per detection (index-keyed: detections never reorder within a result).
+  const detectionId = (i: number) => `det-${i}`;
+  // Only detections that carry a normalized box can be wired/boxed. Cached gallery
+  // results made before the box field exist degrade gracefully (no overlay/lines).
+  const boxedDetections = (result?.detections ?? [])
+    .map((d, i) => ({ d, i }))
+    .filter(({ d }) => Array.isArray(d.box) && d.box.length === 4);
+  const tracedIds = boxedDetections.map(({ i }) => detectionId(i));
+  const guessedIds = new Set(
+    boxedDetections.filter(({ d }) => d.grounding === 'guessed').map(({ i }) => detectionId(i)),
+  );
+  // Re-measure the trace lines whenever the result identity, view, or theme changes.
+  const layoutKey = `${imageUrl ?? ''}:${tracedIds.length}:${rightView}:${dark}:${status}`;
+
   return (
     <div className="h-full overflow-y-auto draft-grid bg-parchment">
       <div className="max-w-[88rem] mx-auto px-5 py-6 md:px-8 md:py-8">
@@ -745,7 +801,24 @@ export function ScreenshotStudio() {
         )}
 
         {showWorkspace && (
-          <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 xl:grid-cols-[18rem_minmax(0,1fr)_20rem]">
+          <div
+            ref={workspaceRef}
+            className="relative grid grid-cols-1 gap-5 lg:grid-cols-2 xl:grid-cols-[18rem_minmax(0,1fr)_20rem]"
+          >
+            {/* Signature interaction: construction lines wiring source box → detection
+                row → live preview. Only renders for boxed detections (graceful degrade). */}
+            {result && status === 'ready' && tracedIds.length > 0 && (
+              <TraceLines
+                detectionIds={tracedIds}
+                guessedIds={guessedIds}
+                containerRef={workspaceRef}
+                boxRefs={boxRefs}
+                rowRefs={rowRefs}
+                previewRef={previewRef}
+                hoveredId={hoveredDetectionId}
+                layoutKey={layoutKey}
+              />
+            )}
             {/* ZONE 1 · SOURCE — the input screenshot in a construction-grid frame. */}
             <aside className="flex flex-col">
               <div className="flex items-center justify-between mb-2">
@@ -760,11 +833,55 @@ export function ScreenshotStudio() {
               </div>
               <div className="reticle draft-grid-strong border-hair border-line-strong p-3">
                 {imageUrl ? (
-                  <img
-                    src={imageUrl}
-                    alt="Uploaded screenshot"
-                    className="w-full object-contain bg-white border-hair border-line-soft"
-                  />
+                  <div className="relative bg-white border-hair border-line-soft">
+                    <img
+                      src={imageUrl}
+                      alt="Uploaded screenshot"
+                      className="w-full object-contain"
+                    />
+                    {/* Bounding boxes — positioned in PERCENT so they scale with the image.
+                        Gemini boxes are [ymin, xmin, ymax, xmax] normalized 0-1000. */}
+                    {status === 'ready' &&
+                      boxedDetections.map(({ d, i }) => {
+                        const id = detectionId(i);
+                        const [ymin, xmin, ymax, xmax] = d.box as number[];
+                        const active = hoveredDetectionId === null || hoveredDetectionId === id;
+                        const guessed = d.grounding === 'guessed';
+                        return (
+                          <div
+                            key={id}
+                            ref={(el) => {
+                              boxRefs.current.set(id, el);
+                            }}
+                            className={cn(
+                              'absolute transition-all duration-200',
+                              guessed ? 'border-dashed' : 'border-solid',
+                              active
+                                ? 'border-compass ring-1 ring-compass/40'
+                                : 'border-compass/30',
+                            )}
+                            style={{
+                              left: `${xmin / 10}%`,
+                              top: `${ymin / 10}%`,
+                              width: `${(xmax - xmin) / 10}%`,
+                              height: `${(ymax - ymin) / 10}%`,
+                              borderWidth: 1,
+                              opacity: active ? 1 : 0.45,
+                            }}
+                          >
+                            {/* Index chip at the box top-left. */}
+                            <span
+                              className={cn(
+                                'absolute -top-px -left-px px-1 font-mono text-[9px] leading-[1.4] tabular-nums text-white',
+                                guessed ? 'bg-compass/70' : 'bg-compass',
+                              )}
+                            >
+                              {String(i + 1).padStart(2, '0')}
+                            </span>
+                          </div>
+                        );
+                      })}
+                  </div>
                 ) : (
                   <div className="h-32 grid place-items-center text-small text-muted">
                     No source loaded
@@ -780,7 +897,10 @@ export function ScreenshotStudio() {
             </aside>
 
             {/* ZONE 2 · PREVIEW — the live render, the hero (lg: spans both cols). */}
-            <section className="order-first lg:order-none lg:col-span-2 xl:col-span-1 flex flex-col">
+            <section
+              ref={previewRef}
+              className="order-first lg:order-none lg:col-span-2 xl:col-span-1 flex flex-col"
+            >
               <span className="annotate text-ocean mb-2 inline-block">preview · live render</span>
               <div className="reticle border-hair border-line-strong overflow-hidden min-h-[480px] bg-warm-white">
               {status === 'loading' && !code && (
@@ -876,23 +996,56 @@ export function ScreenshotStudio() {
                 {result && (
                   <>
                     <ul className="flex flex-col">
-                      {result.detections.map((d, i) => (
-                        <li
-                          key={`${d.label}-${i}`}
-                          className="px-4 py-3 border-t-hair border-line-soft first:border-t-0"
-                        >
-                          <div className="flex items-baseline justify-between gap-2">
-                            <span className="text-sm text-ink font-medium">{d.label}</span>
-                            <span className="text-[11px] font-mono text-compass text-right">
-                              {d.componentName}
-                              {d.variant ? ` · ${d.variant}` : ''}
-                            </span>
-                          </div>
-                          <div className="mt-2">
-                            <ConfidenceBar value={d.confidence} />
-                          </div>
-                        </li>
-                      ))}
+                      {result.detections.map((d, i) => {
+                        const id = detectionId(i);
+                        const traced = Array.isArray(d.box) && d.box.length === 4;
+                        const active = hoveredDetectionId === id;
+                        const dimmed = hoveredDetectionId !== null && !active;
+                        return (
+                          <li
+                            key={`${d.label}-${i}`}
+                            ref={(el) => {
+                              rowRefs.current.set(id, el);
+                            }}
+                            tabIndex={traced ? 0 : undefined}
+                            onMouseEnter={() => traced && setHoveredDetectionId(id)}
+                            onMouseLeave={() =>
+                              setHoveredDetectionId((cur) => (cur === id ? null : cur))
+                            }
+                            onFocus={() => traced && setHoveredDetectionId(id)}
+                            onBlur={() =>
+                              setHoveredDetectionId((cur) => (cur === id ? null : cur))
+                            }
+                            className={cn(
+                              'px-4 py-3 border-t-hair border-line-soft first:border-t-0 transition-colors',
+                              traced && 'cursor-pointer focus:outline-none',
+                              active && 'bg-compass/[0.06] ring-1 ring-inset ring-compass/40',
+                              dimmed && 'opacity-50',
+                            )}
+                          >
+                            <div className="flex items-baseline justify-between gap-2">
+                              <span className="flex items-center gap-1.5 text-sm text-ink font-medium">
+                                {traced && (
+                                  <span className="font-mono text-[10px] tabular-nums text-compass">
+                                    {String(i + 1).padStart(2, '0')}
+                                  </span>
+                                )}
+                                {d.label}
+                              </span>
+                              <span className="text-[11px] font-mono text-compass text-right">
+                                {d.componentName}
+                                {d.variant ? ` · ${d.variant}` : ''}
+                              </span>
+                            </div>
+                            <div className="mt-2 flex items-center gap-2.5">
+                              <div className="flex-1">
+                                <ConfidenceBar value={d.confidence} />
+                              </div>
+                              {d.grounding && <GroundingTag grounding={d.grounding} />}
+                            </div>
+                          </li>
+                        );
+                      })}
                       {result.detections.length === 0 && (
                         <li className="px-4 py-3 text-small text-muted">No components detected.</li>
                       )}

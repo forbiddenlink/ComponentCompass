@@ -37,6 +37,17 @@ export interface Detection {
   componentName: string;
   variant?: string;
   confidence: number;
+  /**
+   * Bounding box of this element in the screenshot, normalized 0-1000 in
+   * Gemini's native [ymin, xmin, ymax, xmax] order (y first). Optional so older
+   * cached gallery results without boxes still type-check. Length 4 at runtime.
+   */
+  box?: number[];
+  /**
+   * Honest mapping confidence band: grounded = clean catalog match,
+   * inferred = reasonable with some uncertainty, guessed = low confidence.
+   */
+  grounding?: 'grounded' | 'inferred' | 'guessed';
 }
 
 export interface GenResult {
@@ -158,6 +169,17 @@ const detectionSchema = z.object({
     .min(0)
     .max(1)
     .describe('Confidence (0-1) that this mapping is correct.'),
+  box: z
+    .array(z.number().min(0).max(1000))
+    .length(4)
+    .describe(
+      'Bounding box [ymin, xmin, ymax, xmax] of this element in the screenshot, normalized 0-1000 (y first).',
+    ),
+  grounding: z
+    .enum(['grounded', 'inferred', 'guessed'])
+    .describe(
+      'grounded = maps cleanly to a catalog component; inferred = reasonable mapping with some uncertainty; guessed = low confidence / no good catalog match.',
+    ),
 });
 
 const genSchema = z.object({
@@ -195,6 +217,14 @@ You will be given a screenshot of a user interface. Do TWO things:
 1) DETECT every distinct UI element in the screenshot. For each, map it to the closest
    component from the CATALOG WHITELIST below (by name), pick the best-fitting variant
    when one applies, give it a short human label, and a confidence score (0-1).
+   Also return for EACH detection:
+   - "box": the element's bounding box in the screenshot as [ymin, xmin, ymax, xmax],
+     normalized 0-1000 (y FIRST — Gemini's native box format). Be precise: the box
+     should tightly enclose the visible element.
+   - "grounding": an honest assessment of the catalog mapping —
+     "grounded" if it maps cleanly to a catalog component,
+     "inferred" if it is a reasonable mapping with some uncertainty,
+     "guessed" if confidence is low or there is no good catalog match.
    Return these in "detections".
 
 2) GENERATE one self-contained TypeScript React file (the "jsx" field) that visually
@@ -299,8 +329,13 @@ const ALLOWED_IMAGE_MIME = /^image\/(png|jpeg|jpg|webp|gif)$/i;
  */
 const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
 
-/** Cap on model output tokens per generateObject call, to bound cost. */
-const MAX_OUTPUT_TOKENS = 4000;
+/**
+ * Cap on model output tokens per generateObject call, to bound cost. Gemini 2.5
+ * spends "thoughts" tokens against this budget before emitting the structured
+ * object, so the cap must cover reasoning + the (sizeable) jsx field + the
+ * per-detection box/grounding fields, or the JSON is truncated mid-string.
+ */
+const MAX_OUTPUT_TOKENS = 8000;
 
 /** Approximate decoded byte length of a base64 string without allocating a Buffer. */
 function approxBase64Bytes(base64: string): number {

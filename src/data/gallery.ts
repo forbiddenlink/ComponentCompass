@@ -16,6 +16,9 @@ export interface GalleryDetection {
   componentName: string;
   variant?: string;
   confidence: number;
+  /** [ymin, xmin, ymax, xmax] normalized 0-1000 (y first). Absent on pre-box cached results. */
+  box?: number[];
+  grounding?: 'grounded' | 'inferred' | 'guessed';
 }
 
 export interface GalleryGenResult {

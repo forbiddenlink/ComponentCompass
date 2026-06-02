@@ -6,31 +6,136 @@
     "result": {
       "detections": [
         {
-          "label": "Pricing Card Container",
+          "label": "Pricing Card",
           "componentName": "Card",
           "variant": "default",
-          "confidence": 1
+          "confidence": 1,
+          "box": [
+            80,
+            100,
+            920,
+            900
+          ],
+          "grounding": "grounded"
         },
         {
           "label": "PRO Badge",
           "componentName": "Badge",
           "variant": "default",
-          "confidence": 1
+          "confidence": 1,
+          "box": [
+            148,
+            178,
+            192,
+            250
+          ],
+          "grounding": "grounded"
+        },
+        {
+          "label": "Price Amount",
+          "componentName": "Text",
+          "confidence": 0.8,
+          "box": [
+            230,
+            178,
+            280,
+            298
+          ],
+          "grounding": "inferred"
+        },
+        {
+          "label": "Price Unit",
+          "componentName": "Text",
+          "confidence": 0.8,
+          "box": [
+            245,
+            303,
+            270,
+            378
+          ],
+          "grounding": "inferred"
+        },
+        {
+          "label": "Description Text",
+          "componentName": "Text",
+          "confidence": 0.8,
+          "box": [
+            318,
+            178,
+            370,
+            698
+          ],
+          "grounding": "inferred"
+        },
+        {
+          "label": "Feature: Unlimited projects",
+          "componentName": "Text",
+          "confidence": 0.7,
+          "box": [
+            438,
+            178,
+            468,
+            448
+          ],
+          "grounding": "inferred"
+        },
+        {
+          "label": "Feature: Priority support",
+          "componentName": "Text",
+          "confidence": 0.7,
+          "box": [
+            488,
+            178,
+            518,
+            418
+          ],
+          "grounding": "inferred"
+        },
+        {
+          "label": "Feature: Advanced analytics",
+          "componentName": "Text",
+          "confidence": 0.7,
+          "box": [
+            538,
+            178,
+            568,
+            448
+          ],
+          "grounding": "inferred"
+        },
+        {
+          "label": "Feature: 100 GB storage",
+          "componentName": "Text",
+          "confidence": 0.7,
+          "box": [
+            588,
+            178,
+            618,
+            418
+          ],
+          "grounding": "inferred"
         },
         {
           "label": "Get started button",
           "componentName": "Button",
           "variant": "default",
-          "confidence": 1
+          "confidence": 1,
+          "box": [
+            760,
+            178,
+            820,
+            822
+          ],
+          "grounding": "grounded"
         }
       ],
-      "jsx": "import React from 'react';import { Check } from 'lucide-react';export default function App() {return (<div className=\"min-h-screen bg-gray-100 flex items-center justify-center p-4\"><div className=\"bg-white rounded-xl shadow-lg p-8 w-full max-w-sm\"><span className=\"inline-flex items-center rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-medium text-indigo-700\">PRO</span><div className=\"mt-4 text-5xl font-bold text-gray-900\">$29<span className=\"text-xl font-medium text-gray-600\">/month</span></div><p className=\"mt-2 text-gray-600\">Everything you need to scale your team.</p><div className=\"mt-6 space-y-3\"><div className=\"flex items-center\"><Check className=\"h-5 w-5 text-green-500 mr-2\" /><span className=\"text-gray-700\">Unlimited projects</span></div><div className=\"flex items-center\"><Check className=\"h-5 w-5 text-green-500 mr-2\" /><span className=\"text-gray-700\">Priority support</span></div><div className=\"flex items-center\"><Check className=\"h-5 w-5 text-green-500 mr-2\" /><span className=\"text-gray-700\">Advanced analytics</span></div><div className=\"flex items-center\"><Check className=\"h-5 w-5 text-green-500 mr-2\" /><span className=\"text-gray-700\">100 GB storage</span></div></div><button className=\"mt-8 w-full rounded-lg bg-indigo-600 py-3 px-6 text-white font-medium hover:bg-indigo-700 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2\">Get started</button></div></div>);}",
+      "jsx": "import React from 'react';import { Check } from 'lucide-react';export default function App() {  const FeatureItem = ({ children }) => (    <div className=\"flex items-center gap-2 text-gray-700\">      <Check className=\"h-4 w-4 text-green-500\" />      <span>{children}</span>    </div>  );  return (    <div className=\"flex min-h-screen items-center justify-center bg-gray-100 p-4\">      <div className=\"w-full max-w-sm rounded-xl bg-white p-8 shadow-lg\">        <div className=\"mb-4 inline-block rounded-full bg-indigo-100 px-3 py-1 text-xs font-semibold uppercase text-indigo-600\">          PRO        </div>        <div className=\"mb-2 flex items-baseline\">          <span className=\"text-5xl font-bold text-gray-900\">$29</span>          <span className=\"ml-2 text-lg text-gray-600\">/month</span>        </div>        <p className=\"mb-8 text-gray-600\">          Everything you need to scale your team.        </p>        <div className=\"mb-8 space-y-3\">          <FeatureItem>Unlimited projects</FeatureItem>          <FeatureItem>Priority support</FeatureItem>          <FeatureItem>Advanced analytics</FeatureItem>          <FeatureItem>100 GB storage</FeatureItem>        </div>        <button className=\"w-full rounded-lg bg-indigo-600 px-6 py-3 text-lg font-semibold text-white shadow-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2\">          Get started        </button>      </div>    </div>  );}",
       "componentsUsed": [
         "Card",
         "Badge",
         "Button"
       ],
-      "notes": "The layout is a simple pricing card. The main container is represented by a Card. The 'PRO' label is a Badge. The 'Get started' call to action is a Button. The feature list items are composed of text and a checkmark icon from lucide-react, as there isn't a specific 'List Item' component in the catalog.",
+      "notes": "The UI is a standard pricing card layout. The main container is mapped to a 'Card'. The 'PRO' label is a 'Badge'. The 'Get started' call to action is a 'Button'. Text elements for price, description, and features are composed using basic HTML and Tailwind CSS, as there are no specific catalog components for these. Lucide-react's 'Check' icon is used for the feature list items.",
       "repairs": 0
     }
   },
@@ -41,92 +146,174 @@
     "result": {
       "detections": [
         {
-          "label": "Login Form Card",
+          "label": "Login Card",
           "componentName": "Card",
-          "variant": "default",
-          "confidence": 1
+          "confidence": 1,
+          "box": [
+            82,
+            109,
+            917,
+            890
+          ],
+          "grounding": "grounded"
         },
         {
-          "label": "Welcome Back Heading",
+          "label": "Welcome back heading",
           "componentName": "Text",
-          "confidence": 0.9
+          "confidence": 0.9,
+          "box": [
+            140,
+            158,
+            172,
+            399
+          ],
+          "grounding": "inferred"
         },
         {
-          "label": "Subtitle Text",
+          "label": "Subtitle text",
           "componentName": "Text",
-          "confidence": 0.9
+          "confidence": 0.85,
+          "box": [
+            184,
+            158,
+            204,
+            600
+          ],
+          "grounding": "inferred"
         },
         {
-          "label": "Email Label",
+          "label": "Email label",
           "componentName": "Text",
-          "confidence": 0.9
+          "confidence": 0.9,
+          "box": [
+            280,
+            158,
+            298,
+            209
+          ],
+          "grounding": "inferred"
         },
         {
-          "label": "Email Input Field",
+          "label": "Email input",
           "componentName": "Input",
-          "variant": "default",
-          "confidence": 1
+          "confidence": 1,
+          "box": [
+            310,
+            158,
+            358,
+            840
+          ],
+          "grounding": "grounded"
         },
         {
-          "label": "Password Label",
+          "label": "Password label",
           "componentName": "Text",
-          "confidence": 0.9
+          "confidence": 0.9,
+          "box": [
+            400,
+            158,
+            418,
+            248
+          ],
+          "grounding": "inferred"
         },
         {
-          "label": "Forgot Password Link",
+          "label": "Forgot password link",
           "componentName": "Button",
           "variant": "link",
-          "confidence": 1
+          "confidence": 0.95,
+          "box": [
+            400,
+            760,
+            418,
+            840
+          ],
+          "grounding": "grounded"
         },
         {
-          "label": "Password Input Field",
+          "label": "Password input",
           "componentName": "Input",
-          "variant": "default",
-          "confidence": 1
+          "confidence": 1,
+          "box": [
+            430,
+            158,
+            478,
+            840
+          ],
+          "grounding": "grounded"
         },
         {
-          "label": "Remember Me Checkbox",
+          "label": "Remember me checkbox",
           "componentName": "Checkbox",
-          "variant": "default",
-          "confidence": 1
+          "confidence": 1,
+          "box": [
+            540,
+            158,
+            560,
+            310
+          ],
+          "grounding": "grounded"
         },
         {
-          "label": "Remember Me Label",
-          "componentName": "Text",
-          "confidence": 0.9
-        },
-        {
-          "label": "Sign In Button",
+          "label": "Sign in button",
           "componentName": "Button",
           "variant": "default",
-          "confidence": 1
+          "confidence": 1,
+          "box": [
+            610,
+            158,
+            660,
+            840
+          ],
+          "grounding": "grounded"
         },
         {
-          "label": "Continue with Google Button",
+          "label": "Continue with Google button",
           "componentName": "Button",
           "variant": "outline",
-          "confidence": 1
+          "confidence": 1,
+          "box": [
+            680,
+            158,
+            730,
+            840
+          ],
+          "grounding": "grounded"
         },
         {
-          "label": "No Account Text",
+          "label": "No account text",
           "componentName": "Text",
-          "confidence": 0.9
+          "confidence": 0.85,
+          "box": [
+            840,
+            350,
+            860,
+            470
+          ],
+          "grounding": "inferred"
         },
         {
-          "label": "Sign Up Link",
+          "label": "Sign up link",
           "componentName": "Button",
           "variant": "link",
-          "confidence": 1
+          "confidence": 0.95,
+          "box": [
+            840,
+            475,
+            860,
+            550
+          ],
+          "grounding": "grounded"
         }
       ],
-      "jsx": "import React, { useState } from 'react';export default function App() {  const [email, setEmail] = useState('');  const [password, setPassword] = useState('');  const [rememberMe, setRememberMe] = useState(false);  return (    <div className=\"min-h-screen bg-gray-100 flex items-center justify-center p-4\">      <div className=\"bg-white rounded-xl shadow-lg p-8 w-full max-w-md\">        <h2 className=\"text-3xl font-bold text-gray-900 mb-2\">Welcome back</h2>        <p className=\"text-gray-600 mb-8\">Sign in to your account to continue.</p>        <div className=\"mb-6\">          <label htmlFor=\"email\" className=\"block text-sm font-medium text-gray-700 mb-2\">            Email          </label>          <input            type=\"email\"            id=\"email\"            className=\"block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm\"            placeholder=\"you@example.com\"            value={email}            onChange={(e) => setEmail(e.target.value)}          />        </div>        <div className=\"mb-6\">          <div className=\"flex justify-between items-center mb-2\">            <label htmlFor=\"password\" className=\"block text-sm font-medium text-gray-700\">              Password            </label>            <button type=\"button\" className=\"text-sm text-indigo-600 hover:text-indigo-500 font-medium\">              Forgot?            </button>          </div>          <input            type=\"password\"            id=\"password\"            className=\"block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm\"            placeholder=\"••••••••\"            value={password}            onChange={(e) => setPassword(e.target.value)}          />        </div>        <div className=\"flex items-center mb-6\">          <input            id=\"remember-me\"            name=\"remember-me\"            type=\"checkbox\"            className=\"h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded\"            checked={rememberMe}            onChange={(e) => setRememberMe(e.target.checked)}          />          <label htmlFor=\"remember-me\" className=\"ml-2 block text-sm text-gray-900\">            Remember me          </label>        </div>        <button          type=\"submit\"          className=\"w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 mb-4\"        >          Sign in        </button>        <button          type=\"button\"          className=\"w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500\"        >          Continue with Google        </button>        <p className=\"mt-8 text-center text-sm text-gray-600\">          No account?{' '}          <button type=\"button\" className=\"font-medium text-indigo-600 hover:text-indigo-500\">            Sign up          </button>        </p>      </div>    </div>  );}",
+      "jsx": "import React, { useState } from 'react';\n\nconst Card = ({ children, className }) => (\n  <div className={`rounded-lg bg-white shadow-md ${className}`}>\n    {children}\n  </div>\n);\n\nconst Input = ({ type = 'text', placeholder, value, onChange, className }) => (\n  <input\n    type={type}\n    placeholder={placeholder}\n    value={value}\n    onChange={onChange}\n    className={`flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${className}`}\n  />\n);\n\nconst Button = ({ children, variant = 'default', className, ...props }) => {\n  const baseStyles = 'inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50';\n  const variants = {\n    default: 'bg-indigo-600 text-white hover:bg-indigo-700',\n    destructive: 'bg-destructive text-destructive-foreground hover:bg-destructive/90',\n    outline: 'border border-input bg-background hover:bg-accent hover:text-accent-foreground',\n    secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80',\n    ghost: 'hover:bg-accent hover:text-accent-foreground',\n    link: 'text-indigo-600 underline-offset-4 hover:underline'\n  };\n  return (\n    <button className={`${baseStyles} ${variants[variant]} ${className}`} {...props}>\n      {children}\n    </button>\n  );\n};\n\nconst Checkbox = ({ checked, onCheckedChange, id, label, className }) => (\n  <div className={`flex items-center space-x-2 ${className}`}>\n    <input\n      type=\"checkbox\"\n      id={id}\n      checked={checked}\n      onChange={(e) => onCheckedChange(e.target.checked)}\n      className=\"h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500\"\n    />\n    {label && (\n      <label htmlFor={id} className=\"text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70\">\n        {label}\n      </label>\n    )}\n  </div>\n);\n\nexport default function App() {\n  const [email, setEmail] = useState('');\n  const [password, setPassword] = useState('');\n  const [rememberMe, setRememberMe] = useState(false);\n\n  return (\n    <div className=\"flex min-h-screen items-center justify-center bg-gray-100 p-4\">\n      <Card className=\"w-full max-w-md p-8\">\n        <h2 className=\"text-2xl font-bold text-gray-900\">Welcome back</h2>\n        <p className=\"mt-1 text-sm text-gray-600\">Sign in to your account to continue.</p>\n\n        <div className=\"mt-8 space-y-4\">\n          <div>\n            <label htmlFor=\"email\" className=\"block text-sm font-medium text-gray-700\">Email</label>\n            <Input\n              id=\"email\"\n              type=\"email\"\n              placeholder=\"you@example.com\"\n              value={email}\n              onChange={(e) => setEmail(e.target.value)}\n              className=\"mt-1\"\n            />\n          </div>\n\n          <div>\n            <div className=\"flex items-center justify-between\">\n              <label htmlFor=\"password\" className=\"block text-sm font-medium text-gray-700\">Password</label>\n              <Button variant=\"link\" className=\"text-sm p-0 h-auto\">Forgot?</Button>\n            </div>\n            <Input\n              id=\"password\"\n              type=\"password\"\n              placeholder=\"••••••••\"\n              value={password}\n              onChange={(e) => setPassword(e.target.value)}\n              className=\"mt-1\"\n            />\n          </div>\n\n          <Checkbox\n            id=\"remember-me\"\n            label=\"Remember me\"\n            checked={rememberMe}\n            onCheckedChange={setRememberMe}\n          />\n\n          <Button className=\"w-full py-2.5\">\n            Sign in\n          </Button>\n\n          <Button variant=\"outline\" className=\"w-full py-2.5\">\n            Continue with Google\n          </Button>\n        </div>\n\n        <div className=\"mt-6 text-center text-sm text-gray-600\">\n          No account?{' '}\n          <Button variant=\"link\" className=\"p-0 h-auto\">Sign up</Button>\n        </div>\n      </Card>\n    </div>\n  );\n}",
       "componentsUsed": [
         "Card",
         "Input",
         "Button",
         "Checkbox"
       ],
-      "notes": "The layout is a centered card containing a login form. The Card component was used for the main container. Input components were used for the email and password fields, with appropriate styling for borders, padding, and focus states. The Checkbox component was used for the 'Remember me' option. Buttons were styled using the 'default' variant for 'Sign in' (purple background), 'outline' for 'Continue with Google' (white background with border), and 'link' for 'Forgot?' and 'Sign up'. Tailwind's `indigo-600` was used to match the primary purple color.",
+      "notes": "The layout is a simple centered card with a login form. Standard form elements like labels, inputs, buttons, and a checkbox are used. The 'Sign in' button uses a custom indigo background color, while 'Continue with Google' uses the 'outline' variant. 'Forgot?' and 'Sign up' are rendered as 'link' buttons. Text elements like headings and descriptive text are rendered using basic HTML tags as they don't have direct catalog component mappings, but are inferred as 'Text' for detection purposes.",
       "repairs": 0
     }
   },
@@ -139,51 +326,255 @@
         {
           "label": "Total revenue card",
           "componentName": "Card",
-          "confidence": 1
+          "confidence": 1,
+          "box": [
+            100,
+            48,
+            490,
+            490
+          ],
+          "grounding": "grounded"
+        },
+        {
+          "label": "Total revenue label",
+          "componentName": "Text",
+          "confidence": 0.8,
+          "box": [
+            150,
+            90,
+            175,
+            200
+          ],
+          "grounding": "inferred"
+        },
+        {
+          "label": "Total revenue value",
+          "componentName": "Text",
+          "confidence": 0.8,
+          "box": [
+            240,
+            90,
+            300,
+            270
+          ],
+          "grounding": "inferred"
+        },
+        {
+          "label": "Total revenue comparison text",
+          "componentName": "Text",
+          "confidence": 0.8,
+          "box": [
+            310,
+            90,
+            335,
+            350
+          ],
+          "grounding": "inferred"
+        },
+        {
+          "label": "Total revenue percentage badge",
+          "componentName": "Badge",
+          "variant": "default",
+          "confidence": 1,
+          "box": [
+            147,
+            354,
+            178,
+            427
+          ],
+          "grounding": "grounded"
         },
         {
           "label": "Active users card",
           "componentName": "Card",
-          "confidence": 1
+          "confidence": 1,
+          "box": [
+            100,
+            506,
+            490,
+            948
+          ],
+          "grounding": "grounded"
+        },
+        {
+          "label": "Active users label",
+          "componentName": "Text",
+          "confidence": 0.8,
+          "box": [
+            150,
+            548,
+            175,
+            650
+          ],
+          "grounding": "inferred"
+        },
+        {
+          "label": "Active users value",
+          "componentName": "Text",
+          "confidence": 0.8,
+          "box": [
+            240,
+            548,
+            300,
+            680
+          ],
+          "grounding": "inferred"
+        },
+        {
+          "label": "Active users comparison text",
+          "componentName": "Text",
+          "confidence": 0.8,
+          "box": [
+            310,
+            548,
+            335,
+            750
+          ],
+          "grounding": "inferred"
+        },
+        {
+          "label": "Active users percentage badge",
+          "componentName": "Badge",
+          "variant": "default",
+          "confidence": 1,
+          "box": [
+            147,
+            804,
+            178,
+            877
+          ],
+          "grounding": "grounded"
         },
         {
           "label": "Conversion card",
           "componentName": "Card",
-          "confidence": 1
+          "confidence": 1,
+          "box": [
+            506,
+            48,
+            896,
+            490
+          ],
+          "grounding": "grounded"
+        },
+        {
+          "label": "Conversion label",
+          "componentName": "Text",
+          "confidence": 0.8,
+          "box": [
+            555,
+            90,
+            580,
+            180
+          ],
+          "grounding": "inferred"
+        },
+        {
+          "label": "Conversion value",
+          "componentName": "Text",
+          "confidence": 0.8,
+          "box": [
+            645,
+            90,
+            705,
+            270
+          ],
+          "grounding": "inferred"
+        },
+        {
+          "label": "Conversion comparison text",
+          "componentName": "Text",
+          "confidence": 0.8,
+          "box": [
+            715,
+            90,
+            740,
+            350
+          ],
+          "grounding": "inferred"
+        },
+        {
+          "label": "Conversion percentage badge",
+          "componentName": "Badge",
+          "variant": "destructive",
+          "confidence": 1,
+          "box": [
+            552,
+            354,
+            583,
+            427
+          ],
+          "grounding": "grounded"
         },
         {
           "label": "Average session card",
           "componentName": "Card",
-          "confidence": 1
+          "confidence": 1,
+          "box": [
+            506,
+            506,
+            896,
+            948
+          ],
+          "grounding": "grounded"
         },
         {
-          "label": "Revenue change badge",
-          "componentName": "Badge",
-          "confidence": 0.9
+          "label": "Average session label",
+          "componentName": "Text",
+          "confidence": 0.8,
+          "box": [
+            555,
+            548,
+            580,
+            650
+          ],
+          "grounding": "inferred"
         },
         {
-          "label": "Active users change badge",
-          "componentName": "Badge",
-          "confidence": 0.9
+          "label": "Average session value",
+          "componentName": "Text",
+          "confidence": 0.8,
+          "box": [
+            645,
+            548,
+            705,
+            750
+          ],
+          "grounding": "inferred"
         },
         {
-          "label": "Conversion change badge",
-          "componentName": "Badge",
-          "confidence": 0.9
+          "label": "Average session comparison text",
+          "componentName": "Text",
+          "confidence": 0.8,
+          "box": [
+            715,
+            548,
+            740,
+            800
+          ],
+          "grounding": "inferred"
         },
         {
-          "label": "Average session change badge",
+          "label": "Average session percentage badge",
           "componentName": "Badge",
-          "confidence": 0.9
+          "variant": "default",
+          "confidence": 1,
+          "box": [
+            552,
+            804,
+            583,
+            877
+          ],
+          "grounding": "grounded"
         }
       ],
-      "jsx": "import React from 'react';export default function App() {return (<div className=\"min-h-screen bg-gray-100 p-8 flex items-center justify-center\"><div className=\"grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl w-full\"><div className=\"bg-white rounded-xl shadow-sm p-6\"><div className=\"flex justify-between items-center\"><p className=\"text-gray-500 text-sm\">Total revenue</p><span className=\"px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800\">+12.5%</span></div><p className=\"font-bold text-4xl mt-2\">$48,290</p><p className=\"text-gray-500 text-sm mt-1\">vs. $42,910 last month</p></div><div className=\"bg-white rounded-xl shadow-sm p-6\"><div className=\"flex justify-between items-center\"><p className=\"text-gray-500 text-sm\">Active users</p><span className=\"px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800\">+4.2%</span></div><p className=\"font-bold text-4xl mt-2\">2,318</p><p className=\"text-gray-500 text-sm mt-1\">vs. 2,224 last month</p></div><div className=\"bg-white rounded-xl shadow-sm p-6\"><div className=\"flex justify-between items-center\"><p className=\"text-gray-500 text-sm\">Conversion</p><span className=\"px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800\">-1.1%</span></div><p className=\"font-bold text-4xl mt-2\">3.24%</p><p className=\"text-gray-500 text-sm mt-1\">vs. 3.28% last month</p></div><div className=\"bg-white rounded-xl shadow-sm p-6\"><div className=\"flex justify-between items-center\"><p className=\"text-gray-500 text-sm\">Avg. session</p><span className=\"px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800\">+8.0%</span></div><p className=\"font-bold text-4xl mt-2\">4m 12s</p><p className=\"text-gray-500 text-sm mt-1\">vs. 3m 53s last month</p></div></div></div>);}",
+      "jsx": "import React from 'react';interface CardProps {children: React.ReactNode;className?: string;}const Card: React.FC<CardProps> = ({ children, className }) => {return (<div className={`rounded-xl border bg-white text-gray-900 shadow-sm ${className || ''}`}>{children}</div>);};interface BadgeProps {children: React.ReactNode;variant?: \"default\" | \"secondary\" | \"destructive\" | \"outline\";className?: string;}const Badge: React.FC<BadgeProps> = ({ children, variant = \"default\", className }) => {let variantClasses = \"\";switch (variant) {case \"default\":variantClasses = \"bg-green-100 text-green-800\";break;case \"destructive\":variantClasses = \"bg-red-100 text-red-800\";break;case \"secondary\":variantClasses = \"bg-gray-100 text-gray-800\";break;case \"outline\":variantClasses = \"border border-gray-200 text-gray-900\";break;}const allClasses = [\"inline-flex\", \"items-center\", \"rounded-full\", \"px-2.5\", \"py-0.5\", \"text-xs\", \"font-medium\", variantClasses, className].filter(Boolean).join(\" \");return (<span className={allClasses}>{children}</span>);};export default function App() {return (<div className=\"min-h-screen bg-gray-100 p-8 flex items-center justify-center\"><div className=\"grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl w-full\"><Card className=\"p-6\"><div className=\"flex justify-between items-start mb-2\"><p className=\"text-sm text-gray-500\">Total revenue</p><Badge>+12.5%</Badge></div><p className=\"text-3xl font-bold text-gray-900 mb-1\">$48,290</p><p className=\"text-sm text-gray-500\">vs. $42,910 last month</p></Card><Card className=\"p-6\"><div className=\"flex justify-between items-start mb-2\"><p className=\"text-sm text-gray-500\">Active users</p><Badge>+4.2%</Badge></div><p className=\"text-3xl font-bold text-gray-900 mb-1\">2,318</p><p className=\"text-sm text-gray-500\">vs. 2,224 last month</p></Card><Card className=\"p-6\"><div className=\"flex justify-between items-start mb-2\"><p className=\"text-sm text-gray-500\">Conversion</p><Badge variant=\"destructive\">-1.1%</Badge></div><p className=\"text-3xl font-bold text-gray-900 mb-1\">3.24%</p><p className=\"text-sm text-gray-500\">vs. 3.28% last month</p></Card><Card className=\"p-6\"><div className=\"flex justify-between items-start mb-2\"><p className=\"text-sm text-gray-500\">Avg. session</p><Badge>+8.0%</Badge></div><p className=\"text-3xl font-bold text-gray-900 mb-1\">4m 12s</p><p className=\"text-sm text-gray-500\">vs. 3m 53s last month</p></Card></div></div>);}",
       "componentsUsed": [
         "Card",
         "Badge"
       ],
-      "notes": "The layout is a simple 2x2 grid of cards. Each card displays a metric title, the main value, a comparison text, and a percentage change badge. The specific light green and light red background colors for the badges are achieved using custom Tailwind classes as these exact color variants are not explicitly available in the Badge component's whitelist variants.",
-      "repairs": 0
+      "notes": "The previous error was likely due to a parsing issue with string interpolation in the `className` prop of the `Badge` component. I've refactored the `Badge` component's `className` construction to build an array of classes, filter out any falsy values (like `undefined`), and then join them with spaces. This is a more robust way to handle class concatenation and should prevent similar parsing errors. Additionally, I've ensured `className` in `Card` defaults to an empty string to avoid `undefined` in the template literal. The layout uses a simple grid for the cards, and the content within each card is structured with flexbox for alignment.",
+      "repairs": 1
     }
   },
   {
@@ -193,67 +584,165 @@
     "result": {
       "detections": [
         {
-          "label": "Main container card",
+          "label": "Main Card Container",
           "componentName": "Card",
           "variant": "default",
-          "confidence": 1
+          "confidence": 1,
+          "box": [
+            46,
+            150,
+            955,
+            850
+          ],
+          "grounding": "grounded"
         },
         {
-          "label": "Company logo (A)",
+          "label": "Company Initials Avatar",
           "componentName": "Badge",
           "variant": "default",
-          "confidence": 0.7
+          "confidence": 0.8,
+          "box": [
+            99,
+            200,
+            146,
+            246
+          ],
+          "grounding": "inferred"
         },
         {
-          "label": "Dashboard navigation link",
+          "label": "Company Name",
+          "componentName": "div",
+          "confidence": 0.7,
+          "box": [
+            108,
+            265,
+            137,
+            390
+          ],
+          "grounding": "guessed"
+        },
+        {
+          "label": "Dashboard Navigation Item (Active)",
           "componentName": "Button",
           "variant": "ghost",
-          "confidence": 0.9
+          "confidence": 0.9,
+          "box": [
+            199,
+            180,
+            250,
+            820
+          ],
+          "grounding": "inferred"
         },
         {
-          "label": "Projects navigation link",
+          "label": "Projects Navigation Item",
           "componentName": "Button",
           "variant": "ghost",
-          "confidence": 0.9
+          "confidence": 0.9,
+          "box": [
+            269,
+            180,
+            320,
+            820
+          ],
+          "grounding": "inferred"
         },
         {
-          "label": "Team navigation link",
+          "label": "Team Navigation Item",
           "componentName": "Button",
           "variant": "ghost",
-          "confidence": 0.9
+          "confidence": 0.9,
+          "box": [
+            339,
+            180,
+            390,
+            820
+          ],
+          "grounding": "inferred"
         },
         {
-          "label": "Reports navigation link",
+          "label": "Reports Navigation Item",
           "componentName": "Button",
           "variant": "ghost",
-          "confidence": 0.9
+          "confidence": 0.9,
+          "box": [
+            409,
+            180,
+            460,
+            820
+          ],
+          "grounding": "inferred"
         },
         {
-          "label": "Settings navigation link",
+          "label": "Settings Navigation Item",
           "componentName": "Button",
           "variant": "ghost",
-          "confidence": 0.9
+          "confidence": 0.9,
+          "box": [
+            479,
+            180,
+            530,
+            820
+          ],
+          "grounding": "inferred"
         },
         {
-          "label": "User profile card",
+          "label": "User Profile Section",
           "componentName": "Card",
           "variant": "default",
-          "confidence": 1
+          "confidence": 0.95,
+          "box": [
+            800,
+            180,
+            900,
+            820
+          ],
+          "grounding": "grounded"
         },
         {
-          "label": "User avatar placeholder",
-          "componentName": "Badge",
-          "variant": "default",
-          "confidence": 0.6
+          "label": "User Avatar",
+          "componentName": "div",
+          "confidence": 0.7,
+          "box": [
+            825,
+            200,
+            875,
+            250
+          ],
+          "grounding": "guessed"
+        },
+        {
+          "label": "User Name",
+          "componentName": "div",
+          "confidence": 0.7,
+          "box": [
+            828,
+            270,
+            850,
+            360
+          ],
+          "grounding": "guessed"
+        },
+        {
+          "label": "User Email",
+          "componentName": "div",
+          "confidence": 0.7,
+          "box": [
+            850,
+            270,
+            870,
+            400
+          ],
+          "grounding": "guessed"
         }
       ],
-      "jsx": "import React from 'react';const cn = (...inputs) => {return inputs.filter(Boolean).join(\" \");};interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {variant?: \"default\" | \"destructive\" | \"outline\" | \"secondary\" | \"ghost\" | \"link\";size?: \"default\" | \"sm\" | \"lg\" | \"icon\";asChild?: boolean;}const Button = React.forwardRef(({\n  className,\n  variant = \"default\",\n  size = \"default\",\n  asChild = false,\n  ...props\n}, ref) => {\n  const Comp = asChild ? \"span\" : \"button\";\n  const baseClasses = \"inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50\";\n  const variantClasses = {\n    default: \"bg-blue-600 text-white hover:bg-blue-700\",\n    destructive: \"bg-red-600 text-white hover:bg-red-700\",\n    outline: \"border border-gray-300 bg-white hover:bg-gray-100\",\n    secondary: \"bg-gray-200 text-gray-800 hover:bg-gray-300\",\n    ghost: \"hover:bg-gray-100 hover:text-gray-900\",\n    link: \"text-blue-600 underline-offset-4 hover:underline\"\n  };\n  const sizeClasses = {\n    default: \"h-10 px-4 py-2\",\n    sm: \"h-9 rounded-md px-3\",\n    lg: \"h-11 rounded-md px-8\",\n    icon: \"h-10 w-10\"\n  };\n  return (<Comp className={cn(baseClasses, variantClasses[variant], sizeClasses[size], className)} ref={ref} {...props} />);\n});Button.displayName = \"Button\";interface CardProps extends React.HTMLAttributes<HTMLDivElement> {}const Card = React.forwardRef(({\n  className,\n  ...props\n}, ref) => (<div ref={ref} className={cn(\"rounded-xl bg-white shadow-lg\", className)} {...props} />));Card.displayName = \"Card\";export default function App() {return (<div className=\"min-h-screen bg-gray-100 flex items-center justify-center p-4\"><Card className=\"w-full max-w-xs p-4 flex flex-col justify-between\" style={{minHeight: '600px'}}><div className=\"flex flex-col\"><div className=\"flex items-center space-x-3 mb-8 px-2\"><div className=\"w-10 h-10 bg-violet-600 rounded-md flex items-center justify-center text-white font-bold text-lg\">A</div><p className=\"font-semibold text-lg text-gray-900\">Acme Inc</p></div><nav className=\"space-y-1\"><Button variant=\"ghost\" className=\"w-full justify-start text-violet-800 bg-violet-100 px-2 py-2 h-auto\"><div className=\"w-2 h-2 rounded-full bg-violet-600 mr-3\"></div>Dashboard</Button><Button variant=\"ghost\" className=\"w-full justify-start text-gray-600 px-2 py-2 h-auto\"><div className=\"w-2 h-2 rounded-full bg-gray-400 mr-3\"></div>Projects</Button><Button variant=\"ghost\" className=\"w-full justify-start text-gray-600 px-2 py-2 h-auto\"><div className=\"w-2 h-2 rounded-full bg-gray-400 mr-3\"></div>Team</Button><Button variant=\"ghost\" className=\"w-full justify-start text-gray-600 px-2 py-2 h-auto\"><div className=\"w-2 h-2 rounded-full bg-gray-400 mr-3\"></div>Reports</Button><Button variant=\"ghost\" className=\"w-full justify-start text-gray-600 px-2 py-2 h-auto\"><div className=\"w-2 h-2 rounded-full bg-gray-400 mr-3\"></div>Settings</Button></nav></div><Card className=\"p-3 flex items-center space-x-3 shadow-none border border-gray-200\"><div className=\"w-10 h-10 bg-gray-300 rounded-full\"></div><div><p className=\"font-medium text-gray-900\">Jane Doe</p><p className=\"text-sm text-gray-500\">jane@acme.com</p></div></Card></Card></div>);}",
+      "jsx": "import React from 'react';\n\nconst Card = ({ children, className = '' }) => (\n  <div className={`rounded-xl border bg-card text-card-foreground shadow-sm ${className}`}>\n    {children}\n  </div>\n);\n\nconst Button = ({ children, className = '', variant = 'default', ...props }) => {\n  const baseStyles = 'inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50';\n  const variants = {\n    default: 'bg-primary text-primary-foreground hover:bg-primary/90',\n    destructive: 'bg-destructive text-destructive-foreground hover:bg-destructive/90',\n    outline: 'border border-input bg-background hover:bg-accent hover:text-accent-foreground',\n    secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80',\n    ghost: 'hover:bg-accent hover:text-accent-foreground',\n    link: 'text-primary underline-offset-4 hover:underline'\n  };\n  return (\n    <button className={`${baseStyles} ${variants[variant]} ${className}`} {...props}>\n      {children}\n    </button>\n  );\n};\n\nconst Badge = ({ children, className = '', variant = 'default' }) => {\n  const baseStyles = 'inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2';\n  const variants = {\n    default: 'border-transparent bg-primary text-primary-foreground hover:bg-primary/80',\n    secondary: 'border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80',\n    destructive: 'border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/80',\n    outline: 'text-foreground'\n  };\n  return (\n    <div className={`${baseStyles} ${variants[variant]} ${className}`}>\n      {children}\n    </div>\n  );\n};\n\nexport default function App() {\n  return (\n    <div className=\"flex min-h-screen items-center justify-center bg-gray-100 p-4\">\n      <Card className=\"w-full max-w-sm p-4 flex flex-col gap-6\">\n        <div className=\"flex items-center gap-4 pb-4 border-b border-gray-200\">\n          <Badge className=\"bg-indigo-600 text-white text-lg font-bold w-12 h-12 flex items-center justify-center rounded-lg\">A</Badge>\n          <span className=\"text-xl font-semibold text-gray-900\">Acme Inc</span>\n        </div>\n\n        <nav className=\"flex flex-col gap-1\">\n          <Button variant=\"ghost\" className=\"justify-start px-3 py-2 text-base font-medium text-indigo-700 bg-indigo-50 hover:bg-indigo-100\">\n            <div className=\"w-2 h-2 rounded-full bg-indigo-600 mr-3\"></div>\n            Dashboard\n          </Button>\n          <Button variant=\"ghost\" className=\"justify-start px-3 py-2 text-base font-medium text-gray-700 hover:bg-gray-50\">\n            <div className=\"w-2 h-2 rounded-full bg-gray-400 mr-3\"></div>\n            Projects\n          </Button>\n          <Button variant=\"ghost\" className=\"justify-start px-3 py-2 text-base font-medium text-gray-700 hover:bg-gray-50\">\n            <div className=\"w-2 h-2 rounded-full bg-gray-400 mr-3\"></div>\n            Team\n          </Button>\n          <Button variant=\"ghost\" className=\"justify-start px-3 py-2 text-base font-medium text-gray-700 hover:bg-gray-50\">\n            <div className=\"w-2 h-2 rounded-full bg-gray-400 mr-3\"></div>\n            Reports\n          </Button>\n          <Button variant=\"ghost\" className=\"justify-start px-3 py-2 text-base font-medium text-gray-700 hover:bg-gray-50\">\n            <div className=\"w-2 h-2 rounded-full bg-gray-400 mr-3\"></div>\n            Settings\n          </Button>\n        </nav>\n\n        <div className=\"flex-grow\"></div>\n\n        <Card className=\"p-3 flex items-center gap-3 bg-gray-50 border-gray-200\">\n          <div className=\"w-12 h-12 rounded-full bg-gray-300\"></div>\n          <div className=\"flex flex-col\">\n            <span className=\"text-base font-medium text-gray-900\">Jane Doe</span>\n            <span className=\"text-sm text-gray-500\">jane@acme.com</span>\n          </div>\n        </Card>\n      </Card>\n    </div>\n  );\n}",
       "componentsUsed": [
         "Card",
         "Button",
         "Badge"
       ],
-      "notes": "The UI is structured around a main `Card` component, which also contains a nested `Card` for the user profile at the bottom. Navigation items are implemented using `Button` components with the `ghost` variant, customized with specific Tailwind classes for active/inactive states and bullet points. The company logo ('A') and the user avatar are represented using `Badge` components, as they are the closest catalog elements for small, styled visual indicators, although their typical use case might differ. Plain text elements like company name, user name, and email are rendered directly as `p` tags and are not mapped to catalog components.",
+      "notes": "The main layout is a `Card` component. Navigation items are implemented using the `Button` component with the `ghost` variant, styled to resemble list items with leading dots. The active 'Dashboard' item has a distinct background and text color. The company logo is represented by a `Badge` component, and the user profile at the bottom is another `Card` component. Custom `div` elements are used for avatars and dots as there are no specific catalog components for these visual elements.",
       "repairs": 0
     }
   }
