@@ -434,8 +434,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.setHeader('Access-Control-Allow-Origin', '*');
     return res.status(200).json(result);
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Generation failed';
-    const status = message.includes('data URL') ? 400 : 500;
-    return res.status(status).json({ error: message });
+    const detail = error instanceof Error ? error.message : 'Generation failed';
+    // Input-validation errors are safe to return. Anything else may contain
+    // provider internals (including secrets echoed in request headers), so log
+    // it server-side only and return a generic message to the client.
+    if (detail.includes('data URL')) {
+      return res.status(400).json({ error: detail });
+    }
+    console.error('[api/generate] generation failed:', detail);
+    return res.status(500).json({ error: 'Generation failed. Please try again.' });
   }
 }
