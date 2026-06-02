@@ -150,6 +150,12 @@ export default {
             transitionDuration: {
                 DEFAULT: '150ms',
             },
+            transitionTimingFunction: {
+                // Reveal curve (ease-out-quint) for content entering — slow settle, no bounce.
+                draft: 'cubic-bezier(0.23, 1, 0.32, 1)',
+                // UI curve for fast interactive transitions (toggles, hovers).
+                ui: 'cubic-bezier(0.32, 0.72, 0, 1)',
+            },
         },
     },
     plugins: [],

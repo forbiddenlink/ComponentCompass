@@ -42,6 +42,23 @@ interface GenResult {
 
 type Status = 'idle' | 'loading' | 'ready' | 'error';
 
+/**
+ * Progressive-enhancement wrapper: runs a state update inside a View Transition
+ * (a smooth cross-fade of the source → output swap) where the browser supports
+ * it, and falls back to a plain synchronous update otherwise. Reduced-motion is
+ * honored by the UA; the transition is purely cosmetic.
+ */
+function withViewTransition(update: () => void): void {
+  const doc = document as Document & {
+    startViewTransition?: (cb: () => void) => unknown;
+  };
+  if (typeof doc.startViewTransition === 'function') {
+    doc.startViewTransition(update);
+  } else {
+    update();
+  }
+}
+
 /** A tiny inline placeholder so the empty state's "try a sample" is self-contained. */
 const SAMPLE_DATA_URL =
   'data:image/svg+xml;base64,' +
@@ -312,9 +329,10 @@ function A11yScore({
             aria-label={`Accessibility score ${score} out of 100`}
           >
             <span className={cn('absolute left-0 top-0 bottom-0 w-0.5 rounded-full', ruleColor)} />
-            <span className={cn('font-display text-2xl font-bold leading-none tabular-nums', scoreColor)}>
-              {score}
-            </span>
+            <CountUp
+              value={score}
+              className={cn('font-display text-2xl font-bold leading-none', scoreColor)}
+            />
             <span className="font-mono text-[11px] text-muted">/100</span>
           </div>
           <div className="flex flex-col gap-0.5">
@@ -437,6 +455,152 @@ function CopyCodeButton({ code }: { code: string }) {
 }
 
 /**
+ * Zero-library count-up numeral. Drives the CSS `@property --n` animation by
+ * setting `--n-target`, so the digits tick 0 → value on mount with the reveal
+ * curve. Falls back to the static number where `@property` is unsupported (the
+ * `<span>` text is the accessible value; the animated glyphs are decorative).
+ * Reduced-motion users get the final number immediately (see index.css).
+ */
+function CountUp({
+  value,
+  className,
+  duration = 900,
+}: {
+  value: number;
+  className?: string;
+  duration?: number;
+}) {
+  // Remount on value change so the keyframe restarts from 0.
+  return (
+    <span
+      key={value}
+      className={cn('count-up tabular-nums', className)}
+      style={
+        {
+          '--n-target': value,
+          animationDuration: `${duration}ms`,
+        } as React.CSSProperties
+      }
+      // The visible glyphs are CSS-generated; expose the real value to AT.
+      aria-label={String(value)}
+      role="img"
+    />
+  );
+}
+
+/**
+ * Technical dimension line (├────┤): a horizontal hairline with end ticks and a
+ * centered mono label, reading like a schematic measurement. Used to annotate the
+ * SOURCE screenshot + PREVIEW frame widths. Decorative — `aria-hidden`.
+ */
+function DimensionLine({ label, className }: { label: string; className?: string }) {
+  return (
+    <div className={cn('flex items-center justify-center select-none', className)} aria-hidden="true">
+      <div className="dimension-line w-full">
+        <span className="dimension-label absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap">
+          {label}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/** The four narrated stages of a generation, in order. */
+const PLOTTER_STEPS = [
+  { key: 'detecting', label: 'DETECTING', until: 0.15 },
+  { key: 'grounding', label: 'GROUNDING', until: 0.3 },
+  { key: 'drafting', label: 'DRAFTING', until: 0.75 },
+  { key: 'a11y', label: 'CHECKING A11Y', until: 1 },
+] as const;
+
+/**
+ * The "plotter" generation panel shown while a trace is in flight. The backend
+ * call is a single async request (not streamed), so the four stages advance on
+ * TIMED ESTIMATES — honest about being estimated, never a fake percentage. The
+ * ACTIVE step shows a 1px vermilion pen sweeping left → right across a hairline
+ * track (a pen plotter laying ink); completed steps show a filled vermilion tick.
+ * When the result arrives the parent unmounts this (status flips to 'ready').
+ */
+function PlotterSequence() {
+  const [activeIdx, setActiveIdx] = useState(0);
+
+  useEffect(() => {
+    // Estimated cadence over ~38s: detect ~15%, ground ~30%, draft ~75%, then
+    // settle on the a11y stage until the real result snaps us out.
+    const EST_TOTAL_MS = 38000;
+    const timers = PLOTTER_STEPS.slice(0, -1).map((step, i) =>
+      window.setTimeout(() => setActiveIdx(i + 1), step.until * EST_TOTAL_MS),
+    );
+    return () => timers.forEach((t) => window.clearTimeout(t));
+  }, []);
+
+  return (
+    <div
+      className="px-5 py-6"
+      role="status"
+      aria-live="polite"
+      aria-label={`Tracing screenshot, step ${activeIdx + 1} of ${PLOTTER_STEPS.length}: ${PLOTTER_STEPS[activeIdx].label}`}
+    >
+      <div className="flex items-baseline justify-between mb-4">
+        <span className="annotate text-ocean">plotter · tracing</span>
+        <span className="annotate text-muted normal-case tracking-normal">estimated</span>
+      </div>
+      <ol className="flex flex-col gap-3.5">
+        {PLOTTER_STEPS.map((step, i) => {
+          const done = i < activeIdx;
+          const active = i === activeIdx;
+          return (
+            <li key={step.key} className="flex items-center gap-3">
+              {/* Status glyph: filled vermilion tick when done, hollow when pending. */}
+              <span className="flex-shrink-0 w-3.5 h-3.5 grid place-items-center">
+                {done ? (
+                  <svg viewBox="0 0 14 14" className="w-3.5 h-3.5 text-compass" aria-hidden="true">
+                    <path
+                      d="M3 7.5l2.5 2.5L11 4"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.75"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                ) : (
+                  <span
+                    className={cn(
+                      'w-1.5 h-1.5 rounded-full',
+                      active ? 'bg-compass' : 'bg-line-default',
+                    )}
+                  />
+                )}
+              </span>
+              <span
+                className={cn(
+                  'annotate w-32 flex-shrink-0',
+                  done ? 'text-graphite' : active ? 'text-ink' : 'text-muted/60',
+                )}
+              >
+                {step.label}
+              </span>
+              {/* Hairline track. The active step animates a vermilion pen across it,
+                  trailing ink fill. Done steps show a fully-inked track. */}
+              <span className="relative flex-1 h-px bg-line-default overflow-visible">
+                {done && <span className="absolute inset-0 bg-compass/40" />}
+                {active && (
+                  <>
+                    <span className="plotter-ink absolute inset-0 bg-compass/30" />
+                    <span className="plotter-head absolute -top-1.5 left-0 w-px h-[calc(100%+0.75rem)] bg-compass" />
+                  </>
+                )}
+              </span>
+            </li>
+          );
+        })}
+      </ol>
+    </div>
+  );
+}
+
+/**
  * Screenshot-vs-render proof. The input screenshot on one side, the live Sandpack
  * preview on the other, behind a draggable divider. The preview is the actual
  * rendered component (not a static snapshot), so the comparison stays live.
@@ -468,6 +632,9 @@ export function ScreenshotStudio() {
   const [rightView, setRightView] = useState<'code' | 'compare'>('code');
   const [dark, toggleDark] = useStudioTheme();
   const [hoveredDetectionId, setHoveredDetectionId] = useState<string | null>(null);
+  // Natural pixel dimensions of the loaded source image, for the schematic
+  // dimension-line annotation under the SOURCE frame.
+  const [sourceDims, setSourceDims] = useState<{ w: number; h: number } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   // Trace-line plumbing: the workspace is the SVG coord space; box/row refs are the
   // line endpoints; previewRef is where lines terminate.
@@ -502,9 +669,12 @@ export function ScreenshotStudio() {
           throw new Error(friendlyError(res.status, typeof body?.error === 'string' ? body.error : ''));
         }
         const data: GenResult = await res.json();
-        setResult(data);
-        setCode(data.jsx);
-        setStatus('ready');
+        // Cross-fade the loading plotter → result frames where supported.
+        withViewTransition(() => {
+          setResult(data);
+          setCode(data.jsx);
+          setStatus('ready');
+        });
       } catch (err) {
         // Friendly copy only. If a result already exists, keep it visible and show a
         // dismissible banner instead of dumping the user back to the empty dropzone.
@@ -626,6 +796,7 @@ export function ScreenshotStudio() {
     setImageUrl(null);
     setResult(null);
     setCode('');
+    setSourceDims(null);
   };
 
   // Keep the workspace mounted whenever there is work to preserve: while loading,
@@ -649,7 +820,7 @@ export function ScreenshotStudio() {
   const layoutKey = `${imageUrl ?? ''}:${tracedIds.length}:${rightView}:${dark}:${status}`;
 
   return (
-    <div className="h-full overflow-y-auto draft-grid bg-parchment">
+    <div className="h-full overflow-y-auto bg-parchment">
       <div className="max-w-[88rem] mx-auto px-5 py-6 md:px-8 md:py-8">
         <header className="mb-7 flex items-end justify-between gap-4 border-b-hair border-line-strong pb-5">
           <div className="max-w-2xl">
@@ -682,7 +853,7 @@ export function ScreenshotStudio() {
               onDragLeave={() => setIsDragging(false)}
               onDrop={onDrop}
               className={cn(
-                'reticle draft-grid-strong border-hair p-10 md:p-14 text-center transition-colors',
+                'reticle pad-margin draft-plate border-hair p-10 md:p-14 text-center transition-colors',
                 isDragging ? 'border-compass bg-compass/[0.04]' : 'border-line-strong',
               )}
             >
@@ -831,13 +1002,24 @@ export function ScreenshotStudio() {
                   + new
                 </button>
               </div>
-              <div className="reticle draft-grid-strong border-hair border-line-strong p-3">
+              <div
+                className={cn(
+                  'reticle draft-plate border-hair border-line-strong p-3',
+                  status === 'ready' && 'reticle-lock',
+                )}
+              >
                 {imageUrl ? (
                   <div className="relative bg-white border-hair border-line-soft">
                     <img
                       src={imageUrl}
                       alt="Uploaded screenshot"
                       className="w-full object-contain"
+                      onLoad={(e) => {
+                        const img = e.currentTarget;
+                        if (img.naturalWidth && img.naturalHeight) {
+                          setSourceDims({ w: img.naturalWidth, h: img.naturalHeight });
+                        }
+                      }}
                     />
                     {/* Bounding boxes — positioned in PERCENT so they scale with the image.
                         Gemini boxes are [ymin, xmin, ymax, xmax] normalized 0-1000. */}
@@ -881,6 +1063,13 @@ export function ScreenshotStudio() {
                           </div>
                         );
                       })}
+                    {/* Schematic width dimension line: ├──── 640 × 400 px ────┤ */}
+                    {sourceDims && (
+                      <DimensionLine
+                        label={`${sourceDims.w} × ${sourceDims.h} px`}
+                        className="mt-2 px-1"
+                      />
+                    )}
                   </div>
                 ) : (
                   <div className="h-32 grid place-items-center text-small text-muted">
@@ -901,11 +1090,24 @@ export function ScreenshotStudio() {
               ref={previewRef}
               className="order-first lg:order-none lg:col-span-2 xl:col-span-1 flex flex-col"
             >
-              <span className="annotate text-ocean mb-2 inline-block">preview · live render</span>
-              <div className="reticle border-hair border-line-strong overflow-hidden min-h-[480px] bg-warm-white">
+              <div className="mb-2 flex items-center gap-3">
+                <span className="annotate text-ocean inline-block flex-shrink-0">preview · live render</span>
+                {status === 'ready' && code && (
+                  <DimensionLine label="viewport · 100%" className="flex-1" />
+                )}
+              </div>
+              <div
+                className={cn(
+                  'reticle border-hair border-line-strong overflow-hidden min-h-[480px] bg-warm-white',
+                  status === 'ready' && code && 'reticle-lock',
+                )}
+                style={{ viewTransitionName: 'trace-preview-frame' }}
+              >
               {status === 'loading' && !code && (
-                <div className="flex items-center justify-center h-[480px]">
-                  <div className="w-8 h-8 border-2 border-compass border-t-transparent rounded-full animate-spin" />
+                <div className="flex items-center justify-center min-h-[480px]">
+                  <div className="w-full max-w-md">
+                    <PlotterSequence />
+                  </div>
                 </div>
               )}
               {code && (
@@ -995,6 +1197,16 @@ export function ScreenshotStudio() {
 
                 {result && (
                   <>
+                    {/* Detected-component tally, counting up on reveal. */}
+                    <div className="flex items-baseline gap-1.5 px-4 py-3 border-b-hair border-line-default">
+                      <CountUp
+                        value={result.detections.length}
+                        className="font-display text-xl font-bold leading-none text-ink"
+                      />
+                      <span className="annotate normal-case tracking-normal text-muted">
+                        component{result.detections.length === 1 ? '' : 's'} detected
+                      </span>
+                    </div>
                     <ul className="flex flex-col">
                       {result.detections.map((d, i) => {
                         const id = detectionId(i);

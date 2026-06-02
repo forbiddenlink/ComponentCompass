@@ -105,35 +105,30 @@
     color: var(--text-muted);
   }
 
-  /* Faint blueprint construction grid for the source/canvas frame. */
-  .draft-grid {
-    background-image:
-      repeating-linear-gradient(
-        0deg,
-        transparent, transparent 23px,
-        var(--line-faint) 23px, var(--line-faint) 24px
-      ),
-      repeating-linear-gradient(
-        90deg,
-        transparent, transparent 23px,
-        var(--line-faint) 23px, var(--line-faint) 24px
-      );
+  /* Clean drafting plate. A tiled construction-grid background is an overused AI
+     tell, so Trace's identity comes from its LINE-WORK — trace-lines, reticle
+     corners, dimension annotations, the vermilion accent — over clean vellum, not
+     a graph-paper wash. This is just the elevated paper surface. */
+  .draft-plate {
+    background-color: var(--bg-elevated);
   }
 
-  /* Stronger blueprint grid (used behind the SOURCE screenshot frame). */
-  .draft-grid-strong {
-    background-color: var(--bg-base);
-    background-image:
-      repeating-linear-gradient(
-        0deg,
-        transparent, transparent 15px,
-        var(--line-soft) 15px, var(--line-soft) 16px
-      ),
-      repeating-linear-gradient(
-        90deg,
-        transparent, transparent 15px,
-        var(--line-soft) 15px, var(--line-soft) 16px
-      );
+  /* Engineer's-pad margin rule: a single vermilion vertical hairline set in from
+     the left edge of a frame, the way a drafting pad has one red margin line. A
+     distinctive, NON-repeating motif — one rule, not a pattern. */
+  .pad-margin {
+    position: relative;
+  }
+  .pad-margin::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 14px;
+    width: 1px;
+    background: var(--accent-primary);
+    opacity: 0.28;
+    pointer-events: none;
   }
 
   /* Hairline rule helpers. */
@@ -163,10 +158,97 @@
     border-right: 1px solid var(--accent-blueprint);
   }
 
+  /* Lock-on: when a result frame mounts, the reticle corners register like an
+     instrument acquiring a target — scale 0.6 → 1 + fade, ~200ms on the UI curve. */
+  .reticle-lock::before,
+  .reticle-lock::after {
+    animation: reticle-lock 200ms cubic-bezier(0.32, 0.72, 0, 1) both;
+  }
+  .reticle-lock::after {
+    animation-delay: 60ms;
+  }
+  @keyframes reticle-lock {
+    from { opacity: 0; transform: scale(0.6); }
+    to { opacity: 1; transform: scale(1); }
+  }
+
+  /* ── Technical dimension line (├────┤) ─────────────────────────
+     A horizontal hairline with end ticks and a centered mono label, reading
+     like a schematic measurement. Subtle: graphite line, muted label. */
+  .dimension-line {
+    position: relative;
+    height: 1px;
+    background: var(--line-default);
+    margin: 0;
+  }
+  .dimension-line::before,
+  .dimension-line::after {
+    content: '';
+    position: absolute;
+    top: -3px;
+    width: 1px;
+    height: 7px;
+    background: var(--line-strong);
+  }
+  .dimension-line::before { left: 0; }
+  .dimension-line::after { right: 0; }
+  .dimension-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.5625rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    background: var(--bg-elevated);
+    padding: 0 0.4em;
+  }
+
+  /* ── Count-up numerals (zero-JS) ───────────────────────────────
+     Drives an integer custom property from 0 → target with counter() so the
+     glyphs tick up on reveal. Consumers set `--n-target` + the start var.
+     The animated value is exposed via the ::after content as the visible text. */
+  @property --n {
+    syntax: '<integer>';
+    inherits: false;
+    initial-value: 0;
+  }
+  .count-up {
+    counter-reset: num var(--n);
+    animation: count-up 900ms cubic-bezier(0.23, 1, 0.32, 1) forwards;
+  }
+  .count-up::after {
+    content: counter(num);
+  }
+  @keyframes count-up {
+    from { --n: 0; }
+    to { --n: var(--n-target); }
+  }
+
   /* Typing dots */
   @keyframes bounce-typing {
     0%, 80%, 100% { transform: translateY(0); }
     40% { transform: translateY(-6px); }
+  }
+
+  /* ── Plotter head ──────────────────────────────────────────────
+     A 1px vermilion vertical pen sweeping left → right across a track, as if a
+     pen plotter were laying ink. Loops while the step is active. The trailing
+     ink fill is a separate element growing under the head. The head animates
+     `left` (0 → 100% of the track) since it is a 1px element and translateX
+     percentages resolve against its own width. */
+  @keyframes plotter-sweep {
+    from { left: 0; }
+    to { left: 100%; }
+  }
+  .plotter-head {
+    animation: plotter-sweep 1100ms cubic-bezier(0.32, 0.72, 0, 1) infinite;
+  }
+  @keyframes plotter-ink {
+    from { transform: scaleX(0); }
+    to { transform: scaleX(1); }
+  }
+  .plotter-ink {
+    transform-origin: left center;
+    animation: plotter-ink 1100ms cubic-bezier(0.32, 0.72, 0, 1) infinite;
   }
 
   /* Safe-area padding helpers */
@@ -223,6 +305,12 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+
+  /* Count-up: snap straight to the target value (no tick) so the final number
+     is still shown — the animation's `forwards` fill at duration ~0 lands on it. */
+  .count-up {
+    --n: var(--n-target);
   }
 }
 
