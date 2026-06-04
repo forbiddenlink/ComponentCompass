@@ -56,9 +56,11 @@ The short arc that sums it up: paste a screenshot, watch the trace lines wire th
 
 ## The Comeback Story
 
-I built the first version of this for the Algolia Agent Studio Challenge back in February. Except it was not this. It was a chatbot for searching a component library: ask a question, get a component back. I ran out of time, shelved it, and the last real commit was around May. Then nothing.
+I built the first version of this for the Algolia Agent Studio Challenge back in February, under the name ComponentCompass. Except it was not this. It was a chat box wired to an Algolia index of a shadcn component catalog: you typed "I need a pricing card," it searched the index and returned matching component names and docs links in a chat thread. It could not render anything. It could not even boot without Algolia credentials in your environment, so nobody could just open it and try it. I ran out of time before the challenge deadline, never submitted it, and the last real commit was around May. Then nothing for about three months.
 
-When the Finish-Up-A-Thon showed up, I reopened it and realized the search part was never the interesting idea. The thing worth building was turning a screenshot into a component. So the comeback was not "add a few features." It was a full reframe:
+Reopening it, the honest diagnosis was that the whole premise was wrong. "Search a component library by chatting" solved a problem nobody actually has (you can already grep your own components), the chat framing added friction instead of removing it, and the credential gate guaranteed it would never get a casual try. That is why it died: not a missing feature, a wrong idea.
+
+The thing actually worth building was hiding in plain sight: turning a screenshot into a component. So the comeback was not "add a few features" to the old chatbot. It was a full reframe:
 
 - Tore out the component-search chatbot as the main event and made the screenshot to component flow the whole product.
 - Dropped Algolia entirely. Grounding the model with an in-prompt catalog turned out simpler, faster, and credential free, which means anyone can run the demo with no key.
