@@ -870,9 +870,32 @@ function EmptyState({
   );
 }
 
+/**
+ * True at xl+ (>=1280px), where the workspace is a three-column
+ * source | preview | inspector layout. The trace lines wire those three columns
+ * together and only make geometric sense side-by-side; below xl the layout stacks
+ * and the lines would cut across content, so we don't draw them there. Seeded from
+ * the current match so the effect never setStates synchronously.
+ */
+function useThreeColumnLayout(): boolean {
+  const query = '(min-width: 1280px)';
+  const [wide, setWide] = useState(() =>
+    typeof window !== 'undefined' && window.matchMedia ? window.matchMedia(query).matches : false
+  );
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return;
+    const mq = window.matchMedia(query);
+    const onChange = () => setWide(mq.matches);
+    mq.addEventListener?.('change', onChange);
+    return () => mq.removeEventListener?.('change', onChange);
+  }, []);
+  return wide;
+}
+
 export function ScreenshotStudio() {
   const [status, setStatus] = useState<Status>('idle');
   const [error, setError] = useState<string | null>(null);
+  const isThreeColumn = useThreeColumnLayout();
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [result, setResult] = useState<GenResult | null>(null);
   const [code, setCode] = useState<string>('');
@@ -1348,8 +1371,10 @@ export function ScreenshotStudio() {
             className="relative grid grid-cols-1 gap-5 lg:grid-cols-2 xl:grid-cols-[18rem_minmax(0,1fr)_20rem]"
           >
             {/* Signature interaction: construction lines wiring source box → detection
-                row → live preview. Only renders for boxed detections (graceful degrade). */}
-            {result && status === 'ready' && tracedIds.length > 0 && (
+                row → live preview. Only renders for boxed detections (graceful degrade)
+                and only at xl+, where the three columns sit side by side; below that the
+                layout stacks and the lines would cut across content. */}
+            {result && status === 'ready' && tracedIds.length > 0 && isThreeColumn && (
               <TraceLines
                 detectionIds={tracedIds}
                 guessedIds={guessedIds}
