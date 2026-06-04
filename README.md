@@ -4,7 +4,7 @@
 
 ![Trace turning a login-form screenshot into a live, grounded React component with an accessibility score](docs/demo.gif)
 
-Live demo: **https://trace-seven-ashen.vercel.app**
+Live demo: **https://trace-liz.vercel.app**
 
 ## What it does
 
@@ -83,11 +83,11 @@ Trace ships with an example gallery of preloaded UIs with cached generation resu
 
 ## Accessibility
 
-Every rendered component is scored with axe-core (0-100) and its violations are listed inline. "Fix accessibility" re-prompts Gemini to resolve the reported issues. The automated check catches roughly half of WCAG issues, so treat the score as a directional signal rather than a certification. The app's own UI uses semantic landmarks, ARIA tabs, keyboard navigation, and visible focus styles.
+Every rendered component is scored with axe-core (0-100) and its violations are listed inline. "Fix accessibility" re-prompts Gemini to resolve the reported issues. The automated check catches roughly half of WCAG issues, so treat the score as a directional signal rather than a certification. The app's own UI ships a skip-to-studio link, labeled landmarks, keyboard navigation, and visible focus styles, and passes an axe-core audit clean.
 
 ## Background
 
-Trace began as a component-search chatbot (ComponentCompass) for the Algolia Agent Studio Challenge in February 2026, was shelved, then revived and reframed around the screenshot-to-component idea for the DEV.to GitHub Finish-Up-A-Thon and renamed to Trace. The Algolia dependency was dropped along the way; in-prompt grounding is simpler and credential-free. Read the story: <!-- TODO post URL -->
+Trace began as a component-search chatbot (ComponentCompass) for the Algolia Agent Studio Challenge in February 2026, was shelved, then revived and reframed around the screenshot-to-component idea for the DEV.to GitHub Finish-Up-A-Thon and renamed to Trace. The Algolia dependency was dropped along the way; in-prompt grounding is simpler and credential-free. Read the story: https://dev.to/liztacular/my-ai-tool-generated-garbage-jsx-so-i-grounded-it-in-shadcnui-and-finally-shipped-it-1i1n
 
 ## License
 
