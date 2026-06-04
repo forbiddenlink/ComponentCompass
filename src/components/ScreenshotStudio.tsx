@@ -1598,6 +1598,12 @@ export function ScreenshotStudio() {
               )}
               {code && (
                 <SandpackProvider
+                  // Remount on every new generation/fix/refine. The in-iframe axe
+                  // runner only executes when the entry mounts; a hot-update of
+                  // /App.tsx would re-render the preview but never re-run the check,
+                  // leaving the score stuck. Keying on the code forces a fresh iframe
+                  // so the accessibility score actually re-computes after a fix.
+                  key={code}
                   template="react-ts"
                   theme={dark ? 'dark' : 'light'}
                   files={{
