@@ -487,6 +487,46 @@ export async function generateFromScreenshot(
 }
 
 /**
+ * Best-effort per-IP rate limit for the public, paid endpoint. Vercel keeps a warm
+ * serverless instance between invocations, so this in-memory window catches casual
+ * abuse and runaway clients without extra infrastructure. It is NOT a distributed
+ * guarantee (a cold start or a second instance resets the window); pair it with a
+ * spend cap in the Google AI console and the TRACE_DISABLED kill switch for real
+ * protection. Tunable via RATE_LIMIT_MAX / RATE_LIMIT_WINDOW_MS.
+ */
+const RATE_LIMIT_MAX = Number(process.env.RATE_LIMIT_MAX ?? 10);
+const RATE_LIMIT_WINDOW_MS = Number(process.env.RATE_LIMIT_WINDOW_MS ?? 60_000);
+const rateHits = new Map<string, number[]>();
+
+function clientIp(req: VercelRequest): string {
+  const fwd = req.headers['x-forwarded-for'];
+  const raw = Array.isArray(fwd) ? fwd[0] : fwd;
+  return (raw?.split(',')[0]?.trim() || req.socket?.remoteAddress || 'unknown');
+}
+
+/** Returns true if this IP is over its window budget. Records the hit when allowed. */
+function isRateLimited(ip: string): boolean {
+  const now = Date.now();
+  const cutoff = now - RATE_LIMIT_WINDOW_MS;
+  const hits = (rateHits.get(ip) ?? []).filter((t) => t > cutoff);
+  if (hits.length >= RATE_LIMIT_MAX) {
+    rateHits.set(ip, hits);
+    return true;
+  }
+  hits.push(now);
+  rateHits.set(ip, hits);
+  // Opportunistic cleanup so the map cannot grow without bound on a warm instance.
+  if (rateHits.size > 5000) {
+    for (const [k, v] of rateHits) {
+      const live = v.filter((t) => t > cutoff);
+      if (live.length === 0) rateHits.delete(k);
+      else rateHits.set(k, live);
+    }
+  }
+  return false;
+}
+
+/**
  * POST /api/generate
  * Body: {
  *   imageDataUrl: string,          // a data:<mime>;base64,<payload> URL
@@ -512,6 +552,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  // Best-effort per-IP throttle on the paid endpoint before any model work.
+  if (isRateLimited(clientIp(req))) {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Retry-After', String(Math.ceil(RATE_LIMIT_WINDOW_MS / 1000)));
+    return res.status(429).json({ error: 'Too many requests. Please slow down and try again in a minute.' });
   }
 
   if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
