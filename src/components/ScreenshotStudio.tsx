@@ -731,6 +731,28 @@ function EmptyState({
                 Try a live sample
               </button>
             </div>
+            {/* Instant path: cached results, no key and no wait. Surfaced here in the
+                first viewport so the fastest way to see Trace is one click away (the
+                full specimen gallery still lives further down). */}
+            {GALLERY_EXAMPLES.length > 0 && (
+              <div className="mt-5">
+                <span className="annotate text-muted normal-case tracking-normal">
+                  or load an instant result, no wait:
+                </span>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {GALLERY_EXAMPLES.slice(0, 4).map((ex) => (
+                    <button
+                      key={ex.id}
+                      type="button"
+                      onClick={() => onLoadExample(ex)}
+                      className="rounded-full border-hair border-line-default px-3 py-1.5 text-xs font-display text-ink transition-colors hover:border-compass hover:text-compass focus:outline-none focus:ring-2 focus:ring-compass/40"
+                    >
+                      {ex.title}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             {/* Measurement annotation: reads like a schematic dimension on the plate. */}
             <DimensionLine label="capture · ≤ 4 MB · PNG / JPG" className="mt-7" />
             <input
@@ -1687,6 +1709,29 @@ export function ScreenshotStudio() {
                         component{result.detections.length === 1 ? '' : 's'} detected
                       </span>
                     </div>
+                    {/* Trust readout: how much of the trace is grounded in the real
+                        catalog vs inferred vs guessed. Makes the inspector read like an
+                        audit, and is honest about where the model was unsure. */}
+                    {(() => {
+                      const total = result.detections.length;
+                      const grounded = result.detections.filter((d) => d.grounding === 'grounded').length;
+                      const inferred = result.detections.filter((d) => d.grounding === 'inferred').length;
+                      const guessed = result.detections.filter((d) => d.grounding === 'guessed').length;
+                      const pct = total ? Math.round((grounded / total) * 100) : 0;
+                      return (
+                        <div
+                          className="flex flex-wrap items-center gap-x-2 gap-y-1 px-4 py-2.5 border-b-hair border-line-default font-mono text-[11px]"
+                          aria-label={`Grounding: ${pct} percent grounded, ${inferred} inferred, ${guessed} guessed`}
+                        >
+                          <span className="uppercase tracking-wide text-muted">grounding</span>
+                          <span className="font-semibold text-terrain">{pct}% grounded</span>
+                          <span className="text-line-strong" aria-hidden="true">·</span>
+                          <span className="text-graphite">
+                            {grounded} grounded · {inferred} inferred · {guessed} guessed
+                          </span>
+                        </div>
+                      );
+                    })()}
                     <ul className="flex flex-col">
                       {result.detections.map((d, i) => {
                         const id = detectionId(i);
