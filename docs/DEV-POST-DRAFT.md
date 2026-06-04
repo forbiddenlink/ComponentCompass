@@ -17,7 +17,7 @@ That is Trace. A few months ago it was a dead repo. Here is how I finished it.
 <!-- Upload docs/demo.gif via the DEV editor (drag-drop) and it becomes a CDN URL. -->
 ![Trace in action: a login-form screenshot becomes a live, grounded React component with an accessibility score](docs/demo.gif)
 
-> Live demo: https://trace-seven-ashen.vercel.app (try an example, no signup, no API key)
+> Live demo: https://trace-liz.vercel.app (try an example, no signup, no API key)
 > Code: https://github.com/forbiddenlink/trace
 
 ## What I Built
@@ -45,14 +45,13 @@ Stack: Vite, React 19, TypeScript, Tailwind, Gemini through the Vercel AI SDK, S
 
 ## Demo
 
-> Live: https://trace-seven-ashen.vercel.app
-> Walkthrough GIF below.
+> Live: https://trace-liz.vercel.app
 
-![Generate, score, fix](docs/demo.gif)
+![The studio: the source screenshot with numbered detections on the left, the live editable render in the middle, and the "what the AI sees" inspector with grounding confidence on the right](docs/result.png)
 
 Fastest way to see it: open the live demo and click an example in the gallery. The examples are preloaded with cached results, so they work instantly with no key and no wait. Then upload your own screenshot to run the real pipeline. There is also a compare slider for screenshot versus render, Copy code, and Open in CodeSandbox.
 
-The short arc that sums it up: paste a screenshot, watch the trace lines wire the detected regions to the live render, and see the accessibility score come back (95 on the login form in the GIF, with one real violation listed). "Fix accessibility" re-prompts the model to clear what axe-core flagged. The GIF above runs the real pipeline end to end, no edits.
+The GIF above is one real run, nothing trimmed: I paste a screenshot, the trace lines wire each detected region to the live render, the accessibility score comes back at 95 with one real violation, I hit "Fix accessibility," and it climbs to 100. That is the whole thing.
 
 ## The Comeback Story
 
@@ -77,7 +76,7 @@ I tried to keep this part concrete, because "Copilot helped a lot" is not very u
 
 **Inline, every day.** The boring-but-real one. React 19 deprecated the old `MutableRefObject` typing pattern I had in `TraceLines.tsx`, and Copilot's inline fix switched those props to the current ref type without me looking it up. Same story for Tailwind class strings, type annotations, and the dozens of small completions that keep me in flow instead of tab-switching to docs. None of it is flashy. All of it adds up.
 
-**Debugging, in chat.** [FILL IN with your real instance, e.g.: When the Sandpack preview was rendering unstyled, I pasted the iframe setup and the symptom into Copilot Chat and worked through why Tailwind was not loading in the sandbox. Describe the bug, what you asked, and what you did with the answer. Keep it specific: a file name and the actual fix beat "it helped me debug."] The pattern that works for me is treating Copilot Chat as a rubber duck that talks back: I describe the symptom and my current theory, and the back-and-forth either confirms it or points at something I had ruled out too early.
+**Debugging, in chat.** The component preview kept rendering completely unstyled. Tailwind classes were on the elements but nothing applied. I pasted my Sandpack setup into Copilot Chat with the symptom, and my wrong theory ("the CDN URL must be off"). It pushed back on the theory and pointed at the real cause: I was loading Tailwind through Sandpack's `externalResources`, which injects bare URLs as `<link>` tags, but the Tailwind Play CDN is a `<script>`, not a stylesheet, so it was being dropped in as a dead link and never executed. The fix was to stop using `externalResources` and inject the Play CDN `<script>` into the iframe `<head>` from a custom entry file instead (it lives in `A11Y_ENTRY_SOURCE` now). The pattern that works for me is treating Copilot Chat as a rubber duck that talks back: I describe the symptom and my current theory, and the back-and-forth either confirms it or, like here, points at the thing I had ruled out too early.
 
 **Agent mode, on multi-file work.** The biggest one. I asked it to add test coverage for the new Screenshot Studio features: Vitest coverage for the `friendlyError`, confidence, and grounding logic, plus a Playwright test that loads a gallery example and proves the bounding boxes, trace lines, and accessibility panel render. That change touched `src/components/ScreenshotStudio.tsx`, a new `src/components/ScreenshotStudio.logic.ts`, a new `src/components/ScreenshotStudio.test.tsx`, `src/components/TraceLines.tsx`, and `e2e/app.spec.ts`. It was a good use of Copilot because it was real engineering, not autocomplete: it had to follow the existing test patterns, update stale selectors in the e2e suite, and keep the assertions stable enough to pass.
 
