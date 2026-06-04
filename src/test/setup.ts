@@ -7,12 +7,6 @@ afterEach(() => {
   cleanup();
 });
 
-// Mock environment variables for tests
-vi.stubEnv('VITE_ALGOLIA_APP_ID', 'test-app-id');
-vi.stubEnv('VITE_ALGOLIA_SEARCH_API_KEY', 'test-search-key');
-vi.stubEnv('VITE_ALGOLIA_AGENT_ID', 'test-agent-id');
-vi.stubEnv('VITE_OPENAI_API_KEY', 'test-openai-key');
-
 // Mock localStorage
 const localStorageMock = {
   getItem: vi.fn(),

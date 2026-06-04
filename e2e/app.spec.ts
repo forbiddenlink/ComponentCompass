@@ -3,13 +3,10 @@ import { test, expect, type Page } from '@playwright/test';
 /**
  * E2E coverage for the current Trace app.
  *
- * The app opens on the Screenshot Studio tab. These tests run on the documented
- * zero-cred path: the dev server is started with empty Algolia vars (see
- * playwright.config.ts), so the Chat tab is hidden and the gallery loads cached
- * results with NO call to /api/generate. Nothing here needs a live Gemini key.
+ * Trace is a single-surface app: the Screenshot Studio is the whole product.
+ * These tests run on the documented zero-cred path: the gallery loads cached
+ * results with NO call to /api/generate, so nothing here needs a live Gemini key.
  */
-
-const TAB_BAR = '[role="tablist"][aria-label="View"]';
 
 /** Fail the test if anything hits the generation API (proves the gallery is cached). */
 async function failOnGenerateCall(page: Page) {
@@ -28,13 +25,9 @@ async function loadPricingCardExample(page: Page) {
   await expect(page.getByText(/what the ai sees/i)).toBeVisible();
 }
 
-test.describe('Trace - default view + Studio empty state', () => {
-  test('opens on the Studio tab with the empty state rendered', async ({ page }) => {
+test.describe('Trace - Studio empty state', () => {
+  test('opens on the Studio empty state', async ({ page }) => {
     await page.goto('/');
-
-    // Studio is the default selected tab.
-    const studioTab = page.getByRole('tab', { name: 'Studio' });
-    await expect(studioTab).toHaveAttribute('aria-selected', 'true');
 
     // Heading + tagline of the empty state.
     await expect(
@@ -46,11 +39,12 @@ test.describe('Trace - default view + Studio empty state', () => {
     await expect(page.getByRole('button', { name: 'Choose file' })).toBeVisible();
   });
 
-  test('Chat tab is hidden when Algolia creds are absent', async ({ page }) => {
+  test('exposes a skip-to-studio link as the first focusable element', async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByRole('tab', { name: 'Studio' })).toBeVisible();
-    await expect(page.getByRole('tab', { name: 'Explore' })).toBeVisible();
-    await expect(page.getByRole('tab', { name: 'Chat' })).toHaveCount(0);
+    const skip = page.getByRole('link', { name: /skip to studio/i });
+    await skip.focus();
+    await expect(skip).toBeFocused();
+    await expect(page.locator('main#studio')).toBeVisible();
   });
 });
 
@@ -93,38 +87,6 @@ test.describe('Trace - example gallery (zero-cred path)', () => {
     await expect(traceLines.locator('path').first()).toBeAttached();
 
     await expect(page.locator('[data-testid="a11y-panel"]')).toBeVisible();
-  });
-});
-
-test.describe('Trace - tab navigation', () => {
-  test('clicking Explore switches to the Component Explorer', async ({ page }) => {
-    await page.goto('/');
-    await page.getByRole('tab', { name: 'Explore' }).click();
-    await expect(page.getByRole('tab', { name: 'Explore' })).toHaveAttribute(
-      'aria-selected',
-      'true',
-    );
-    await expect(page.getByRole('heading', { name: 'Component Explorer' })).toBeVisible();
-  });
-
-  test('ArrowRight moves selection across tabs (roving tabindex)', async ({ page }) => {
-    await page.goto('/');
-    const tablist = page.locator(TAB_BAR);
-    await expect(tablist).toBeVisible();
-
-    const studioTab = page.getByRole('tab', { name: 'Studio' });
-    const exploreTab = page.getByRole('tab', { name: 'Explore' });
-
-    // Active tab has tabindex 0, inactive has -1 (roving tabindex pattern).
-    await expect(studioTab).toHaveAttribute('tabindex', '0');
-    await expect(exploreTab).toHaveAttribute('tabindex', '-1');
-
-    await studioTab.focus();
-    await page.keyboard.press('ArrowRight');
-
-    // With only Studio + Explore present, ArrowRight selects Explore.
-    await expect(exploreTab).toHaveAttribute('aria-selected', 'true');
-    await expect(page.getByRole('heading', { name: 'Component Explorer' })).toBeVisible();
   });
 });
 

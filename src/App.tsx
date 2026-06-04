@@ -1,82 +1,30 @@
-import { lazy, Suspense, useState } from 'react';
+import { lazy, Suspense } from 'react';
 import { ErrorBoundary } from './components/ErrorBoundary';
-import { hasAlgolia } from './lib/env';
-import { cn } from './lib/utils';
 
-// Lazy load the main views for faster initial load
-const ChatInterface = lazy(() => import('./components/ChatInterface').then(m => ({ default: m.ChatInterface })));
-const ComponentExplorer = lazy(() => import('./components/ComponentExplorer').then(m => ({ default: m.ComponentExplorer })));
+// Studio is the whole product: paste a screenshot, get a real React component.
+// Lazy-loaded so the Sandpack runtime stays out of the initial bundle.
 const ScreenshotStudio = lazy(() => import('./components/ScreenshotStudio').then(m => ({ default: m.ScreenshotStudio })));
 
-type View = 'studio' | 'chat' | 'explore';
-
-// Chat is powered by Algolia. Only offer it when Algolia creds are present;
-// Studio (Google key) and Explore (static catalog) always work.
-const ALGOLIA_AVAILABLE = hasAlgolia();
-
-const TABS: { id: View; label: string }[] = [
-  { id: 'studio', label: 'Studio' },
-  ...(ALGOLIA_AVAILABLE ? [{ id: 'chat' as const, label: 'Chat' }] : []),
-  { id: 'explore', label: 'Explore' },
-];
-
 function App() {
-  const [view, setView] = useState<View>('studio');
-
-  const handleTabKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>) => {
-    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
-    e.preventDefault();
-    const currentIndex = TABS.findIndex((t) => t.id === view);
-    const delta = e.key === 'ArrowRight' ? 1 : -1;
-    const next = TABS[(currentIndex + delta + TABS.length) % TABS.length];
-    setView(next.id);
-  };
-
   return (
     <ErrorBoundary>
       <div className="flex flex-col h-screen h-[100dvh] bg-parchment">
-        {/* Top bar: wordmark + tabs, hairline-ruled. */}
+        {/* Skip link: first focusable element, jumps past the chrome to the studio. */}
+        <a
+          href="#studio"
+          className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-3 focus:z-50 focus:rounded focus:bg-warm-white focus:px-3 focus:py-1.5 focus:text-small focus:font-display focus:text-ink focus:ring-2 focus:ring-compass/40"
+        >
+          Skip to studio
+        </a>
+
+        {/* Top bar: wordmark, hairline-ruled. */}
         <header className="flex items-center gap-6 px-5 h-14 border-b-hair border-line-strong bg-warm-white flex-shrink-0">
           <TraceWordmark />
-
-          <div className="hidden sm:block h-5 w-px bg-line-default" aria-hidden="true" />
-
-          <nav
-            role="tablist"
-            aria-label="View"
-            className="flex items-stretch self-stretch"
-          >
-            {TABS.map((tab) => {
-              const isActive = view === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  role="tab"
-                  type="button"
-                  aria-selected={isActive}
-                  tabIndex={isActive ? 0 : -1}
-                  onClick={() => setView(tab.id)}
-                  onKeyDown={handleTabKeyDown}
-                  className={cn(
-                    'relative px-4 text-small font-display font-medium tracking-tight transition-colors',
-                    'focus:outline-none focus-visible:ring-2 focus-visible:ring-compass/40',
-                    'after:absolute after:left-3 after:right-3 after:-bottom-px after:h-px after:transition-colors',
-                    isActive
-                      ? 'text-ink after:bg-compass'
-                      : 'text-muted hover:text-ink after:bg-transparent'
-                  )}
-                >
-                  {tab.label}
-                </button>
-              );
-            })}
-          </nav>
-
           <span className="ml-auto annotate hidden md:inline">screenshot to component</span>
         </header>
 
         {/* View */}
-        <div className="flex-1 min-h-0">
+        <main id="studio" className="flex-1 min-h-0">
           <Suspense fallback={
             <div className="flex items-center justify-center h-full bg-parchment">
               <div className="text-center">
@@ -85,15 +33,9 @@ function App() {
               </div>
             </div>
           }>
-            {view === 'studio' ? (
-              <ScreenshotStudio />
-            ) : view === 'chat' ? (
-              <ChatInterface />
-            ) : (
-              <ComponentExplorer />
-            )}
+            <ScreenshotStudio />
           </Suspense>
-        </div>
+        </main>
       </div>
     </ErrorBoundary>
   );

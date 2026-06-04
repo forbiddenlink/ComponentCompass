@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Public+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --vellum: #F4F1EA;
+    --warm-white: #FBFAF5;
+    --ink: #1F2933;
+    --graphite: #3A4654;
+    --muted: #5A6672;
+    --vermilion: #C5482E;
+    --indigo: #27496D;
+    --terrain: #3C6E47;
+    --terrain-light: #E7EEE8;
+    --line: #C9C3B6;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1200px; height: 630px; }
+  body {
+    font-family: 'Public Sans', sans-serif;
+    background: var(--vellum);
+    color: var(--ink);
+    position: relative;
+    overflow: hidden;
+  }
+  /* faint blueprint grid */
+  .grid {
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(var(--line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    background-size: 40px 40px;
+    opacity: 0.18;
+  }
+  /* drafting frame + corner reticles */
+  .frame { position: absolute; inset: 28px; border: 1px solid var(--line); }
+  .reticle { position: absolute; width: 22px; height: 22px; }
+  .reticle::before, .reticle::after { content: ''; position: absolute; background: var(--graphite); }
+  .reticle::before { left: 50%; top: 0; width: 1px; height: 100%; transform: translateX(-50%); }
+  .reticle::after { top: 50%; left: 0; height: 1px; width: 100%; transform: translateY(-50%); }
+  .r-tl { left: 18px; top: 18px; } .r-tr { right: 18px; top: 18px; }
+  .r-bl { left: 18px; bottom: 18px; } .r-br { right: 18px; bottom: 18px; }
+
+  .wrap { position: absolute; inset: 28px; padding: 44px 56px; display: flex; flex-direction: column; }
+
+  /* header */
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .brand .mark { flex: 0 0 auto; }
+  .brand .name { font-family: 'Space Grotesk'; font-weight: 700; font-size: 30px; letter-spacing: -0.02em; }
+  .brand .sep { width: 1px; height: 22px; background: var(--line); margin: 0 6px; }
+  .brand .kicker { font-size: 14px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+
+  .headline {
+    font-family: 'Space Grotesk'; font-weight: 600; letter-spacing: -0.02em;
+    font-size: 52px; line-height: 1.05; margin-top: 26px; max-width: 720px;
+  }
+  .headline b { color: var(--vermilion); font-weight: 700; }
+
+  /* the split demonstration */
+  .demo { flex: 1; display: flex; align-items: center; gap: 0; margin-top: 26px; position: relative; }
+  .panel {
+    background: var(--warm-white); border: 1px solid var(--line);
+    border-radius: 6px; box-shadow: 0 2px 0 rgba(58,70,84,0.06);
+    position: relative;
+  }
+  .panel-label {
+    position: absolute; top: -10px; left: 16px; background: var(--vellum);
+    padding: 0 8px; font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--muted); font-weight: 600;
+  }
+
+  /* left: screenshot with detection boxes */
+  .shot { width: 372px; height: 248px; padding: 22px; }
+  .shot .row { height: 26px; border-radius: 4px; background: #ECE7DC; margin-bottom: 14px; }
+  .shot .row.title { width: 64%; height: 30px; background: #E0DACB; }
+  .shot .row.btn { width: 42%; height: 34px; background: var(--vermilion); opacity: 0.9; }
+  .box { position: absolute; border: 1.5px solid var(--vermilion); border-radius: 3px; }
+  .box .num {
+    position: absolute; left: -9px; top: -9px; width: 18px; height: 18px; border-radius: 50%;
+    background: var(--vermilion); color: #fff; font-size: 11px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center; font-family: 'Space Grotesk';
+  }
+
+  /* trace lines across the seam */
+  .seam { width: 132px; height: 248px; position: relative; flex: 0 0 auto; }
+
+  /* right: rendered component + a11y score */
+  .render { width: 372px; height: 248px; padding: 22px; display: flex; flex-direction: column; }
+  .card {
+    border: 1px solid var(--line); border-radius: 8px; padding: 18px; background: #fff;
+    flex: 1; display: flex; flex-direction: column; gap: 10px;
+  }
+  .card .h { font-family: 'Space Grotesk'; font-weight: 600; font-size: 18px; }
+  .card .p { font-size: 12px; color: var(--muted); line-height: 1.4; }
+  .card .field { height: 30px; border: 1px solid var(--line); border-radius: 5px; background: #FBFAF5; }
+  .card .cta {
+    height: 36px; border-radius: 6px; background: var(--vermilion); color: #fff;
+    display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 13px;
+    font-family: 'Space Grotesk';
+  }
+  .score {
+    position: absolute; right: 4px; top: 4px; display: flex; align-items: center; gap: 8px;
+    background: var(--terrain-light); border: 1px solid var(--terrain);
+    border-radius: 999px; padding: 6px 12px 6px 8px;
+  }
+  .score .dot {
+    width: 30px; height: 30px; border-radius: 50%; background: var(--terrain); color: #fff;
+    display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 15px;
+    font-family: 'Space Grotesk';
+  }
+  .score .lbl { font-size: 11px; font-weight: 600; color: var(--terrain); line-height: 1.1; }
+  .score .lbl small { display: block; font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; opacity: 0.8; }
+
+  .footer {
+    display: flex; align-items: center; gap: 10px; margin-top: 18px;
+    font-size: 13px; color: var(--muted); font-weight: 500;
+  }
+  .footer .tag {
+    border: 1px solid var(--line); border-radius: 4px; padding: 3px 9px;
+    font-size: 11px; letter-spacing: 0.04em; color: var(--graphite); background: var(--warm-white);
+  }
+  .footer .grow { flex: 1; }
+  .footer .url { font-family: 'Space Grotesk'; color: var(--indigo); font-weight: 600; }
+</style>
+</head>
+<body>
+  <div class="grid"></div>
+  <div class="frame"></div>
+  <div class="reticle r-tl"></div><div class="reticle r-tr"></div>
+  <div class="reticle r-bl"></div><div class="reticle r-br"></div>
+
+  <div class="wrap">
+    <div class="brand">
+      <svg class="mark" width="44" height="28" viewBox="0 0 30 20" fill="none">
+        <circle cx="3" cy="10" r="2.5" fill="#C5482E" />
+        <line x1="6" y1="10" x2="21" y2="10" stroke="#27496D" stroke-width="1" stroke-dasharray="2 2" />
+        <circle cx="24" cy="10" r="4.5" stroke="#1F2933" stroke-width="1" fill="none" />
+        <line x1="24" y1="3.5" x2="24" y2="6.5" stroke="#1F2933" stroke-width="1" />
+        <line x1="24" y1="13.5" x2="24" y2="16.5" stroke="#1F2933" stroke-width="1" />
+        <line x1="17.5" y1="10" x2="20" y2="10" stroke="#1F2933" stroke-width="1" />
+        <line x1="28" y1="10" x2="30" y2="10" stroke="#1F2933" stroke-width="1" />
+      </svg>
+      <span class="name">trace</span>
+      <span class="sep"></span>
+      <span class="kicker">screenshot &rarr; react component</span>
+    </div>
+
+    <h1 class="headline">Paste a screenshot.<br/>Get a <b>real, runnable</b> React component.</h1>
+
+    <div class="demo">
+      <!-- left: what the AI sees -->
+      <div class="panel shot">
+        <span class="panel-label">screenshot</span>
+        <div class="row title"></div>
+        <div class="row"></div>
+        <div class="row"></div>
+        <div class="row btn"></div>
+        <div class="box" style="left:34px; top:26px; width:172px; height:34px;"><span class="num">1</span></div>
+        <div class="box" style="left:34px; top:74px; width:308px; height:26px;"><span class="num">2</span></div>
+        <div class="box" style="left:34px; top:160px; width:130px; height:38px;"><span class="num">3</span></div>
+      </div>
+
+      <!-- seam: trace lines -->
+      <div class="seam">
+        <svg width="132" height="248" viewBox="0 0 132 248" fill="none">
+          <path d="M0 43 C 60 43, 72 60, 132 60" stroke="#C5482E" stroke-width="1.5" stroke-dasharray="4 3" fill="none"/>
+          <path d="M0 87 C 60 87, 72 130, 132 130" stroke="#C5482E" stroke-width="1.5" stroke-dasharray="4 3" fill="none"/>
+          <path d="M0 179 C 60 179, 72 196, 132 196" stroke="#C5482E" stroke-width="1.5" stroke-dasharray="4 3" fill="none"/>
+          <circle cx="2" cy="43" r="2.5" fill="#C5482E"/>
+          <circle cx="2" cy="87" r="2.5" fill="#C5482E"/>
+          <circle cx="2" cy="179" r="2.5" fill="#C5482E"/>
+        </svg>
+      </div>
+
+      <!-- right: rendered component + a11y score -->
+      <div class="panel render">
+        <span class="panel-label">live component</span>
+        <div class="score">
+          <span class="dot">100</span>
+          <span class="lbl">a11y<small>axe-core</small></span>
+        </div>
+        <div class="card">
+          <div class="h">Sign in</div>
+          <div class="p">Welcome back. Enter your details.</div>
+          <div class="field"></div>
+          <div class="field"></div>
+          <div class="cta">Continue</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <span class="tag">grounded in shadcn/ui</span>
+      <span class="tag">live editable preview</span>
+      <span class="tag">self-repair</span>
+      <span class="grow"></span>
+      <span class="url">trace-seven-ashen.vercel.app</span>
+    </div>
+  </div>
+</body>
+</html>

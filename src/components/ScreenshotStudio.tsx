@@ -251,11 +251,15 @@ function A11yScore({
   const [state, setState] = useState<A11yState>({ phase: 'pending' });
   const [expanded, setExpanded] = useState(false);
 
-  // New jsx → reset and start waiting for a fresh result.
-  useEffect(() => {
+  // New jsx → reset and start waiting for a fresh result. Done during render via
+  // previous-prop tracking (React's documented pattern) rather than in an effect,
+  // so the reset lands before paint without a cascading-render warning.
+  const [prevJsx, setPrevJsx] = useState(jsx);
+  if (prevJsx !== jsx) {
+    setPrevJsx(jsx);
     setState({ phase: 'pending' });
     setExpanded(false);
-  }, [jsx]);
+  }
 
   useEffect(() => {
     let settled = false;
@@ -1358,7 +1362,7 @@ export function ScreenshotStudio() {
               />
             )}
             {/* ZONE 1 · SOURCE — the input screenshot in a construction-grid frame. */}
-            <aside className="flex flex-col">
+            <aside className="flex flex-col" aria-label="Source screenshot">
               <div className="flex items-center justify-between mb-2">
                 <span className="annotate text-ocean">source</span>
                 <div className="flex items-center gap-3">
@@ -1634,7 +1638,7 @@ export function ScreenshotStudio() {
             </section>
 
             {/* ZONE 3 · INSPECTOR — what the AI sees: detections, catalog, notes. */}
-            <aside className="flex flex-col">
+            <aside className="flex flex-col" aria-label="Inspector: what the AI sees">
               <span className="annotate text-ocean mb-2 inline-block">inspector · what the ai sees</span>
               <div className="border-hair border-line-default bg-warm-white">
                 {status === 'loading' && !result && (

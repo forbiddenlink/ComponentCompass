@@ -2,7 +2,7 @@
 
 **Paste a screenshot. Get a real, runnable React component.**
 
-![Trace demo](docs/demo.gif) <!-- TODO add gif -->
+![Trace turning a login-form screenshot into a live, grounded React component with an accessibility score](docs/demo.gif)
 
 Live demo: **https://trace-seven-ashen.vercel.app**
 

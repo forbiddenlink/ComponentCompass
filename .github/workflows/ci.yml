@@ -20,7 +20,3 @@ jobs:
       - run: pnpm run lint
       - run: pnpm run build
       - run: pnpm test -- --run
-        env:
-          VITE_ALGOLIA_APP_ID: test
-          VITE_ALGOLIA_SEARCH_API_KEY: test
-          VITE_ALGOLIA_AGENT_ID: test

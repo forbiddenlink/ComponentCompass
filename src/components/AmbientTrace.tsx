@@ -14,11 +14,16 @@ import { useEffect, useState } from 'react';
 
 /** True when the user asked for reduced motion. */
 function usePrefersReducedMotion(): boolean {
-  const [reduced, setReduced] = useState(false);
+  // Seed from the current match at first render so the effect never has to
+  // setState synchronously; the effect only subscribes to later changes.
+  const [reduced, setReduced] = useState(() =>
+    typeof window !== 'undefined' && window.matchMedia
+      ? window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      : false
+  );
   useEffect(() => {
     if (typeof window === 'undefined' || !window.matchMedia) return;
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
-    setReduced(mq.matches);
     const onChange = () => setReduced(mq.matches);
     mq.addEventListener?.('change', onChange);
     return () => mq.removeEventListener?.('change', onChange);
