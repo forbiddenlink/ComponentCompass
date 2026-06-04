@@ -347,8 +347,21 @@ const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
  * spends "thoughts" tokens against this budget before emitting the structured
  * object, so the cap must cover reasoning + the (sizeable) jsx field + the
  * per-detection box/grounding fields, or the JSON is truncated mid-string.
+ *
+ * Measured failure (2026-06): with an 8000 cap, Gemini 2.5 flash spent ~6800
+ * tokens on reasoning and only ~1200 on output, truncating the JSON
+ * (finishReason: 'length') so it never parsed. The fix is two-part: cap the
+ * thinking budget (see THINKING_BUDGET) so reasoning cannot starve the output,
+ * and raise this ceiling so a full component + detections always fit.
  */
-const MAX_OUTPUT_TOKENS = 8000;
+const MAX_OUTPUT_TOKENS = 16000;
+
+/**
+ * Hard cap on Gemini 2.5 "thinking" tokens per call. Enough to reason about a
+ * layout, but bounded so it cannot consume the whole output budget and truncate
+ * the structured JSON. Output tokens then cover the component + detections.
+ */
+const THINKING_BUDGET = 2048;
 
 /** Approximate decoded byte length of a base64 string without allocating a Buffer. */
 function approxBase64Bytes(base64: string): number {
@@ -416,6 +429,11 @@ export async function generateFromScreenshot(
       schema: genSchema,
       temperature: 0.2,
       maxOutputTokens: MAX_OUTPUT_TOKENS,
+      // Bound Gemini 2.5 thinking so reasoning cannot eat the whole output
+      // budget and truncate the JSON (finishReason: 'length').
+      providerOptions: {
+        google: { thinkingConfig: { thinkingBudget: THINKING_BUDGET } },
+      },
       messages: [
         {
           role: 'user',
