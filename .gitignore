@@ -55,3 +55,5 @@ out/
 
 # demo capture artifacts (raw video; committed GIF lives in docs/)
 scripts/demo-capture/
+scripts/demo-capture/ already ignored above
+docs/visual-tour/
