@@ -38,7 +38,7 @@
   "devDependencies": {
     "@biomejs/biome": "^2.4.16",
     "@eslint/js": "^9.39.1",
-    "@playwright/test": "^1.59.1",
+    "@playwright/test": "^1.60.0",
     "@tailwindcss/postcss": "^4.3.0",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
@@ -48,12 +48,12 @@
     "@types/react-dom": "^19.2.3",
     "@vercel/node": "^5.8.11",
     "@vitejs/plugin-react": "^5.1.1",
-    "@vitest/ui": "^4.0.18",
+    "@vitest/ui": "^4.1.8",
     "autoprefixer": "^10.5.0",
     "concurrently": "^9.2.1",
     "eslint": "^9.39.1",
-    "eslint-plugin-react-hooks": "^7.0.1",
-    "eslint-plugin-react-refresh": "^0.4.24",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.6.0",
     "jsdom": "^28.0.0",
     "postcss": "^8.5.15",
@@ -61,7 +61,7 @@
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.60.1",
     "vite": "^8.0.16",
-    "vitest": "^4.0.18"
+    "vitest": "^4.1.8"
   },
   "description": "Paste a screenshot, get a real, runnable React component. AI screenshot-to-component with design-system grounding, live preview, self-repair, and an accessibility score.",
   "license": "MIT",
