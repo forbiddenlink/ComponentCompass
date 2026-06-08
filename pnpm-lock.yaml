@@ -27,8 +27,8 @@ importers:
         specifier: ^2.20.0
         version: 2.20.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       ai:
-        specifier: ^6.0.196
-        version: 6.0.196(zod@4.4.3)
+        specifier: ^6.0.197
+        version: 6.0.197(zod@4.4.3)
       axe-core:
         specifier: ^4.12.0
         version: 4.12.0
@@ -88,8 +88,8 @@ importers:
         specifier: ^19.2.3
         version: 19.2.3(@types/react@19.2.17)
       '@vercel/node':
-        specifier: ^5.8.11
-        version: 5.8.11
+        specifier: ^5.8.12
+        version: 5.8.12
       '@vitejs/plugin-react':
         specifier: ^5.1.1
         version: 5.2.0(vite@8.0.16(@types/node@25.9.1)(esbuild@0.28.0)(jiti@1.21.7)(tsx@4.21.0))
@@ -144,8 +144,8 @@ packages:
   '@adobe/css-tools@4.4.4':
     resolution: {integrity: sha512-Elp+iwUx5rN5+Y8xLt5/GRoG20WGoDCQ/1Fb+1LiGtvwbDavuSk0jhD/eZdckHAuzcDzccnkv+rEjyWfRx18gg==}
 
-  '@ai-sdk/gateway@3.0.124':
-    resolution: {integrity: sha512-h8CrmbSG+8X0C+M/E1M4oiDHYevqwbzAPN+uLRHS0eJaatF2MZ+juNtOHXNOjk7Bsk9mD2RjYMjJO9dFkb9I7Q==}
+  '@ai-sdk/gateway@3.0.125':
+    resolution: {integrity: sha512-tocl7cUDoTpmhZqeW8XVKMMznZQwwQAEunF0VyNKmf64qt8NbMIAEiet/vRMzh7Jr9WcFeb6EZjmhLTP4Qx2Og==}
     engines: {node: '>=18'}
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
@@ -1304,8 +1304,8 @@ packages:
     resolution: {integrity: sha512-EbGRQg4FhrmwLodl+t3JNAnXHWVr9Vp+Zl1QBZVPY4ByfkzIT8cX3K6QWODHtkIZqqJVEWvhHSx3v5PDHsaQag==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
 
-  '@vercel/build-utils@13.27.0':
-    resolution: {integrity: sha512-oPD9wDy1KgRWbV5VC5to76TlIV7n7134SgUKvEOCP+0aUlvOdTlK1CzdUJ+FCOM+mNNCRQz9mjqj3zZuG2HI3w==}
+  '@vercel/build-utils@13.27.1':
+    resolution: {integrity: sha512-BD9H2U8I/IPGS1c1stSIkdPxBRu6bkCQFqtRjcT2dcdnBawyHXvzTsnnBQhgB3fJVQtgJT47gVZe1oHDmv0Ktg==}
 
   '@vercel/error-utils@2.2.0':
     resolution: {integrity: sha512-WFWiRxfPzoYWYifaj4thSKvAaZZwUOqD4k5GINRIgZgCiS2E3iAJbWbIsIZmkQdTecWFHcWGA6q48CjisgpOBA==}
@@ -1315,8 +1315,8 @@ packages:
     engines: {node: '>=20'}
     hasBin: true
 
-  '@vercel/node@5.8.11':
-    resolution: {integrity: sha512-NmZEoaDgxeJENIa/osVZOl90Br5Z2DMPFjogOW84j5oeBo0zwKz+oAD/jtgx3KDMg9WWVfTjY6cl6xvWFfQRSQ==}
+  '@vercel/node@5.8.12':
+    resolution: {integrity: sha512-XK2ML9YVdAlZ3BmGTW4jQL0D55ZHeRWKS+CLPSWReDyOBKaC4tTnTL2tp3z76bAs0pfgbT55nplMiX2mneSbLA==}
 
   '@vercel/oidc@3.2.0':
     resolution: {integrity: sha512-UycprH3T6n3jH0k44NHMa7pnFHGu/N05MjojYr+Mc6I7obkoLIJujSWwin1pCvdy/eOxrI/l3uDLQsmcrOb4ug==}
@@ -1391,8 +1391,8 @@ packages:
     resolution: {integrity: sha512-MnA+YT8fwfJPgBx3m60MNqakm30XOkyIoH1y6huTQvC0PwZG7ki8NacLBcrPbNoo8vEZy7Jpuk7+jMO+CUovTQ==}
     engines: {node: '>= 14'}
 
-  ai@6.0.196:
-    resolution: {integrity: sha512-2T45UeqKL4a11KQ14I5i1YYHOvCFrMF478E1k6PVjlQSGUvXSv4xrxIaQbUL4qgv91DADSbddwv3oR49pPAK3g==}
+  ai@6.0.197:
+    resolution: {integrity: sha512-U3KsjkqwQXGHC0u0VeUDqUaNaBS/uQc7v4Vj92Cjv5lPx5DIyRBQYk4Hipy5vwD9AQKIG8uRvdaN9R+pAvrtcQ==}
     engines: {node: '>=18'}
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
@@ -2734,8 +2734,8 @@ packages:
     resolution: {integrity: sha512-Xi4agocCbRzt0yYMZGMA6ApD7gvtUFaxm4ZmeacWI4cZxaF6C+8I8QfofC20NAePiB/IcvZmzkJ7XPa471AEtA==}
     engines: {node: '>=20.18.1'}
 
-  undici@8.3.0:
-    resolution: {integrity: sha512-TkUDgb6tl7KOGZ+7e8E3d2FYgUQgF6z5YypqjWmixVQSQERFcVrVg0ySADm2LVLRh5ljAaHTCR5Fmz3Q34rB7Q==}
+  undici@8.4.1:
+    resolution: {integrity: sha512-RNHlB4fxZK0IrkhBsxhlbx7s8kFWwr7rzzOqj5nvZugw3ig3RsB7KW3zVlV0eu8POl+rx5d1hmL7rRg0z1owow==}
     engines: {node: '>=22.19.0'}
 
   universalify@2.0.1:
@@ -2929,7 +2929,7 @@ snapshots:
 
   '@adobe/css-tools@4.4.4': {}
 
-  '@ai-sdk/gateway@3.0.124(zod@4.4.3)':
+  '@ai-sdk/gateway@3.0.125(zod@4.4.3)':
     dependencies:
       '@ai-sdk/provider': 3.0.10
       '@ai-sdk/provider-utils': 4.0.27(zod@4.4.3)
@@ -4031,7 +4031,7 @@ snapshots:
       '@typescript-eslint/types': 8.60.1
       eslint-visitor-keys: 5.0.1
 
-  '@vercel/build-utils@13.27.0':
+  '@vercel/build-utils@13.27.1':
     dependencies:
       '@vercel/python-analysis': 0.11.1
       cjs-module-lexer: 1.2.3
@@ -4058,13 +4058,13 @@ snapshots:
       - rollup
       - supports-color
 
-  '@vercel/node@5.8.11':
+  '@vercel/node@5.8.12':
     dependencies:
       '@edge-runtime/node-utils': 2.3.0
       '@edge-runtime/primitives': 4.1.0
       '@edge-runtime/vm': 3.2.0
       '@types/node': 20.11.0
-      '@vercel/build-utils': 13.27.0
+      '@vercel/build-utils': 13.27.1
       '@vercel/error-utils': 2.2.0
       '@vercel/nft': 1.10.0
       '@vercel/static-config': 3.4.0
@@ -4081,7 +4081,7 @@ snapshots:
       ts-morph: 12.0.0
       tsx: 4.21.0
       typescript: 5.9.3
-      undici: 8.3.0
+      undici: 8.4.1
     transitivePeerDependencies:
       - encoding
       - rollup
@@ -4183,9 +4183,9 @@ snapshots:
 
   agent-base@7.1.4: {}
 
-  ai@6.0.196(zod@4.4.3):
+  ai@6.0.197(zod@4.4.3):
     dependencies:
-      '@ai-sdk/gateway': 3.0.124(zod@4.4.3)
+      '@ai-sdk/gateway': 3.0.125(zod@4.4.3)
       '@ai-sdk/provider': 3.0.10
       '@ai-sdk/provider-utils': 4.0.27(zod@4.4.3)
       '@opentelemetry/api': 1.9.1
@@ -5461,7 +5461,7 @@ snapshots:
 
   undici@7.24.6: {}
 
-  undici@8.3.0: {}
+  undici@8.4.1: {}
 
   universalify@2.0.1: {}
 
