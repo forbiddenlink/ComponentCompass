@@ -1,32 +1,34 @@
 version: 2
 updates:
   - package-ecosystem: "npm"
+    directories:
+      - "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    cooldown:
+      semver-major-days: 30
+      semver-minor-days: 7
+      semver-patch-days: 3
+    groups:
+      patch-and-minor:
+        patterns: ["*"]
+        update-types: ["patch", "minor"]
+      major-updates:
+        patterns: ["*"]
+        update-types: ["major"]
+    labels: ["dependencies"]
+    commit-message:
+      prefix: "chore(deps):"
+  - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
       day: "monday"
-      time: "09:00"
-      timezone: "America/New_York"
-    open-pull-requests-limit: 10
+    open-pull-requests-limit: 5
     groups:
-      patches:
+      github-actions:
         patterns: ["*"]
-        update-types: ["patch", "minor"]
-      types:
-        patterns: ["@types/*"]
-      tooling:
-        patterns: ["eslint*", "prettier*", "vitest*", "@vitest/*", "playwright*", "@playwright/*"]
-      next-ecosystem:
-        patterns: ["next", "@next/*", "react", "react-dom", "@types/react*"]
-        update-types: ["minor", "patch"]
-    labels: ["dependencies"]
-    ignore:
-      - dependency-name: "*"
-        update-types: ["version-update:semver-major"]
-  - package-ecosystem: "github-actions"
-    directory: "/"
-    schedule:
-      interval: "monthly"
-    groups:
-      gha:
-        patterns: ["*"]
+    commit-message:
+      prefix: "chore(deps):"
