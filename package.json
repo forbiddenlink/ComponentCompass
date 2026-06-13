@@ -27,7 +27,7 @@
     "ai": "^6.0.197",
     "axe-core": "^4.12.0",
     "clsx": "^2.1.1",
-    "esbuild": "^0.28.0",
+    "esbuild": "^0.28.1",
     "framer-motion": "^12.40.0",
     "react": "^19.2.7",
     "react-compare-slider": "^4.0.0",
