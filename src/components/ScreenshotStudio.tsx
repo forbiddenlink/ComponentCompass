@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 import {
   SandpackProvider,
   SandpackLayout,
@@ -615,23 +616,175 @@ function PlotterSequence() {
 }
 
 /**
+ * Track the cursor across a plate for the `.spotlight` glow: write the pointer's
+ * offset into --mx/--my CSS vars the ::before radial-gradient reads. Cheap, no
+ * state, no re-render. Attach as onMouseMove to any element carrying `.spotlight`.
+ */
+function spotlightMove(e: React.MouseEvent<HTMLElement>) {
+  const el = e.currentTarget;
+  const r = el.getBoundingClientRect();
+  el.style.setProperty('--mx', `${e.clientX - r.left}px`);
+  el.style.setProperty('--my', `${e.clientY - r.top}px`);
+}
+
+/**
+ * CAD-style crosshair + live coordinate readout for the drafting frames. `pos` is
+ * the cursor offset (display px) within the relative parent; null hides it. The
+ * host frame sets `cursor: none` while hovering so this hairline reticle stands in
+ * for the pointer, reinforcing the "drafting instrument" read. Decorative +
+ * non-interactive (pointer-events-none) so it never blocks drawing or dragging.
+ */
+function DraftingCrosshair({
+  pos,
+  label,
+}: {
+  pos: { x: number; y: number } | null;
+  label?: string;
+}) {
+  if (!pos) return null;
+  return (
+    <div
+      className="pointer-events-none absolute inset-0 z-20 overflow-hidden"
+      aria-hidden="true"
+    >
+      <span className="absolute inset-y-0 w-px bg-compass/60" style={{ left: pos.x }} />
+      <span className="absolute inset-x-0 h-px bg-compass/60" style={{ top: pos.y }} />
+      <span
+        className="absolute h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full border border-compass"
+        style={{ left: pos.x, top: pos.y }}
+      />
+      <span
+        className="absolute translate-x-2 translate-y-2 whitespace-nowrap bg-compass px-1 py-0.5 font-mono text-[9px] leading-none tabular-nums text-white"
+        style={{ left: pos.x, top: pos.y }}
+      >
+        {label ?? `${Math.round(pos.x)}, ${Math.round(pos.y)}`}
+      </span>
+    </div>
+  );
+}
+
+/**
+ * A schematic ruler tick-strip flanking the compare frame (inline SVG). Ticks
+ * repeat every 8px with a longer tick every 40px, drawn in graphite so it reads
+ * like the edge of a scale rule. Resolution-independent via a userSpaceOnUse
+ * pattern; decorative.
+ */
+function CompareRuler({ orient }: { orient: 'h' | 'v' }) {
+  const uid = useId().replace(/[:]/g, '');
+  const id = `ruler-${orient}-${uid}`;
+  const horizontal = orient === 'h';
+  return (
+    <svg
+      className={cn('block bg-warm-white', horizontal ? 'h-4 w-full' : 'h-full w-4')}
+      preserveAspectRatio="none"
+      aria-hidden="true"
+    >
+      <defs>
+        <pattern
+          id={id}
+          width={horizontal ? 40 : 16}
+          height={horizontal ? 16 : 40}
+          patternUnits="userSpaceOnUse"
+        >
+          {[0, 8, 16, 24, 32].map((n) =>
+            horizontal ? (
+              <line
+                key={n}
+                x1={n + 0.5}
+                x2={n + 0.5}
+                y1={n === 0 ? 4 : 10}
+                y2={16}
+                stroke="rgba(31,41,51,0.28)"
+                strokeWidth={1}
+              />
+            ) : (
+              <line
+                key={n}
+                y1={n + 0.5}
+                y2={n + 0.5}
+                x1={n === 0 ? 4 : 10}
+                x2={16}
+                stroke="rgba(31,41,51,0.28)"
+                strokeWidth={1}
+              />
+            ),
+          )}
+        </pattern>
+      </defs>
+      <rect width="100%" height="100%" fill={`url(#${id})`} />
+    </svg>
+  );
+}
+
+/**
+ * The compare divider handle: a vermilion hairline with a circular grip that
+ * carries a soft vermilion glow and springs on hover / drag (framer-motion).
+ * Spring + glow are gated behind prefers-reduced-motion.
+ */
+function CompareHandle() {
+  const reduced = useReducedMotion();
+  return (
+    <div className="relative flex h-full flex-col items-center justify-center" style={{ cursor: 'ew-resize' }}>
+      <div className="absolute inset-y-0 w-px bg-compass/70" />
+      <motion.div
+        className="relative grid h-9 w-9 place-items-center rounded-full border border-compass bg-warm-white"
+        style={{ boxShadow: '0 0 0 3px rgba(197,72,46,0.15), 0 2px 6px rgba(31,41,51,0.15)' }}
+        whileHover={reduced ? undefined : { scale: 1.14 }}
+        whileTap={reduced ? undefined : { scale: 0.94 }}
+        transition={reduced ? undefined : { type: 'spring', stiffness: 420, damping: 22 }}
+      >
+        <span className="select-none font-mono text-[11px] leading-none tracking-tighter text-compass">
+          ‹›
+        </span>
+      </motion.div>
+    </div>
+  );
+}
+
+/**
  * Screenshot-vs-render proof. The input screenshot on one side, the live Sandpack
  * preview on the other, behind a draggable divider. The preview is the actual
  * rendered component (not a static snapshot), so the comparison stays live.
+ * Flanked by schematic ruler tick-strips; a CAD crosshair + coordinate readout
+ * tracks the cursor over the frame.
  */
 function CompareView({ imageUrl, preview }: { imageUrl: string; preview: React.ReactNode }) {
+  const [cursor, setCursor] = useState<{ x: number; y: number } | null>(null);
+  const frameRef = useRef<HTMLDivElement>(null);
+
+  const onMove = (e: React.PointerEvent) => {
+    const rect = frameRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    setCursor({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+  };
+
   return (
-    <ReactCompareSlider
-      className="h-[480px] w-full bg-warm-white"
-      itemOne={
-        <ReactCompareSliderImage
-          src={imageUrl}
-          alt="Original screenshot"
-          style={{ objectFit: 'contain', background: '#F4F1EA' }}
+    <div className="grid grid-cols-[1rem_1fr] grid-rows-[1rem_1fr] bg-warm-white">
+      <div className="border-hair border-line-soft bg-warm-white" />
+      <CompareRuler orient="h" />
+      <CompareRuler orient="v" />
+      <div
+        ref={frameRef}
+        className="relative h-[480px] w-full overflow-hidden"
+        style={{ cursor: 'none' }}
+        onPointerMove={onMove}
+        onPointerLeave={() => setCursor(null)}
+      >
+        <ReactCompareSlider
+          className="h-full w-full bg-warm-white"
+          handle={<CompareHandle />}
+          itemOne={
+            <ReactCompareSliderImage
+              src={imageUrl}
+              alt="Original screenshot"
+              style={{ objectFit: 'contain', background: '#F4F1EA' }}
+            />
+          }
+          itemTwo={<div className="h-full w-full bg-white">{preview}</div>}
         />
-      }
-      itemTwo={<div className="h-full w-full bg-white">{preview}</div>}
-    />
+        <DraftingCrosshair pos={cursor} />
+      </div>
+    </div>
   );
 }
 
@@ -698,8 +851,9 @@ function EmptyState({
             onDragOver={onDragOver}
             onDragLeave={onDragLeave}
             onDrop={onDrop}
+            onMouseMove={spotlightMove}
             className={cn(
-              'reticle pad-margin draft-plate mt-8 border-hair px-7 py-9 transition-colors',
+              'spotlight reticle pad-margin draft-plate mt-8 border-hair px-7 py-9 transition-colors',
               isDragging ? 'border-compass bg-compass/[0.05]' : 'border-line-strong',
             )}
           >
@@ -838,7 +992,8 @@ function EmptyState({
               <button
                 type="button"
                 onClick={() => onLoadExample(example)}
-                className="group reticle flex h-full w-full flex-col gap-2.5 border-hair border-line-default bg-warm-white p-3 text-left transition-colors hover:border-compass focus:outline-none focus:ring-2 focus:ring-compass/40"
+                onMouseMove={spotlightMove}
+                className="spotlight group reticle flex h-full w-full flex-col gap-2.5 border-hair border-line-default bg-warm-white p-3 text-left transition-colors hover:border-compass focus:outline-none focus:ring-2 focus:ring-compass/40"
               >
                 <div className="flex items-baseline justify-between">
                   <span className="font-mono text-[10px] tabular-nums text-compass">
@@ -934,6 +1089,11 @@ export function ScreenshotStudio() {
   const sourceImgRef = useRef<HTMLImageElement>(null);
   const annotationCanvasRef = useRef<HTMLCanvasElement>(null);
   const [hasStrokes, setHasStrokes] = useState(false);
+  // CAD crosshair readout over the annotation canvas: cursor offset (display px)
+  // plus a natural-resolution coordinate label. Null when the pointer is off it.
+  const [annotCursor, setAnnotCursor] = useState<{ x: number; y: number; label: string } | null>(
+    null,
+  );
   const [rightView, setRightView] = useState<'preview' | 'code' | 'compare'>('preview');
   const [dark, toggleDark] = useStudioTheme();
   const [hoveredDetectionId, setHoveredDetectionId] = useState<string | null>(null);
@@ -1177,7 +1337,22 @@ export function ScreenshotStudio() {
     e.currentTarget.setPointerCapture(e.pointerId);
   };
 
+  // Track the crosshair position (display px within the canvas) + a
+  // natural-resolution coordinate label for the readout.
+  const trackCrosshair = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    const canvas = annotationCanvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    if (rect.width === 0) return;
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const nat = sourceImgRef.current;
+    const scale = nat?.naturalWidth ? nat.naturalWidth / rect.width : 1;
+    setAnnotCursor({ x, y, label: `${Math.round(x * scale)}, ${Math.round(y * scale)}` });
+  };
+
   const onCanvasPointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    trackCrosshair(e);
     if (!drawing.current) return;
     const ctx = annotationCanvasRef.current?.getContext('2d');
     const pt = pointFromEvent(e);
@@ -1193,6 +1368,11 @@ export function ScreenshotStudio() {
   const onCanvasPointerUp = () => {
     drawing.current = false;
     lastPoint.current = null;
+  };
+
+  const onCanvasPointerLeave = () => {
+    onCanvasPointerUp();
+    setAnnotCursor(null);
   };
 
   const clearAnnotations = useCallback(() => {
@@ -1465,15 +1645,19 @@ export function ScreenshotStudio() {
                     {/* Feature 3 — annotation canvas overlay. Sized to the displayed
                         image; vermilion free-draw. Only mounted while annotating. */}
                     {annotating && (
-                      <canvas
-                        ref={annotationCanvasRef}
-                        onPointerDown={onCanvasPointerDown}
-                        onPointerMove={onCanvasPointerMove}
-                        onPointerUp={onCanvasPointerUp}
-                        onPointerLeave={onCanvasPointerUp}
-                        className="absolute inset-0 z-10 h-full w-full cursor-crosshair touch-none"
-                        style={{ touchAction: 'none' }}
-                      />
+                      <>
+                        <canvas
+                          ref={annotationCanvasRef}
+                          onPointerDown={onCanvasPointerDown}
+                          onPointerMove={onCanvasPointerMove}
+                          onPointerEnter={trackCrosshair}
+                          onPointerUp={onCanvasPointerUp}
+                          onPointerLeave={onCanvasPointerLeave}
+                          className="absolute inset-0 z-10 h-full w-full touch-none"
+                          style={{ touchAction: 'none', cursor: 'none' }}
+                        />
+                        <DraftingCrosshair pos={annotCursor} label={annotCursor?.label} />
+                      </>
                     )}
                     {/* Bounding boxes — positioned in PERCENT so they scale with the image.
                         Gemini boxes are [ymin, xmin, ymax, xmax] normalized 0-1000.

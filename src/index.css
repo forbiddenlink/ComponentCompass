@@ -134,6 +134,33 @@
   .rule-x { border-bottom: 0.5px solid var(--line-default); }
   .rule-y { border-right: 0.5px solid var(--line-default); }
 
+  /* ── Spotlight glow ────────────────────────────────────────────
+     A faint vermilion pool of light that tracks the cursor across a plate,
+     like an angled desk lamp over a drafting board. The consumer sets
+     --mx / --my (px, cursor offset) via a mousemove handler; the glow only
+     shows on hover. Reduced-motion snaps the fade (global rule) — the light
+     still appears, it just doesn't ease. Purely decorative, behind content. */
+  .spotlight { position: relative; }
+  .spotlight::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: radial-gradient(
+      170px circle at var(--mx, 50%) var(--my, 50%),
+      rgba(197, 72, 46, 0.10),
+      transparent 62%
+    );
+    opacity: 0;
+    transition: opacity 220ms cubic-bezier(0.32, 0.72, 0, 1);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .spotlight:hover::before,
+  .spotlight:focus-visible::before {
+    opacity: 1;
+  }
+
   /* Corner reticle ticks for framed surfaces (drawn via ::before/::after below). */
   .reticle {
     position: relative;

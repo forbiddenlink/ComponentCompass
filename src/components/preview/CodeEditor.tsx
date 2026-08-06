@@ -49,12 +49,21 @@ export function CodeEditor({
 
     return (
         <div className={cn('relative flex flex-col h-full', className)}>
-            {/* Toolbar */}
-            <div className="flex items-center justify-between px-3 py-2 bg-ink/5 border-b border-ink/10">
-                <span className="text-caption font-mono text-muted">
-                    {sandpack.activeFile}
-                </span>
-                <div className="flex items-center gap-1">
+            {/* Toolbar — Mac-style window chrome: traffic-light dots + title bar.
+                Dots reuse the drafting status palette (vermilion / ochre / surveyor
+                green) rather than literal macOS colors, so the window reads on-brand. */}
+            <div className="flex items-center justify-between gap-3 px-3 py-2 bg-ink/5 border-b border-ink/10">
+                <div className="flex items-center gap-2.5 min-w-0">
+                    <span className="flex items-center gap-1.5" aria-hidden="true">
+                        <span className="h-2.5 w-2.5 rounded-full bg-vermilion/85" />
+                        <span className="h-2.5 w-2.5 rounded-full bg-gold-muted/90" />
+                        <span className="h-2.5 w-2.5 rounded-full bg-terrain/85" />
+                    </span>
+                    <span className="truncate text-caption font-mono text-muted">
+                        {sandpack.activeFile}
+                    </span>
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
                     {!readOnly && (
                         <button
                             onClick={handleReset}
