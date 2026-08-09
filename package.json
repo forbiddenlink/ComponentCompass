@@ -24,6 +24,7 @@
   "dependencies": {
     "@ai-sdk/google": "^3.0.94",
     "@codesandbox/sandpack-react": "^2.20.0",
+    "@sentry/react": "^10.69.0",
     "ai": "^6.0.229",
     "axe-core": "^4.12.1",
     "clsx": "^2.1.1",
