@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.1](https://github.com/forbiddenlink/trace/compare/v1.0.0...v1.0.1) (2026-08-29)
+
+
+### Bug Fixes
+
+* **ci:** remove pnpm/action-setup version pin to avoid packageManager conflict ([#51](https://github.com/forbiddenlink/trace/issues/51)) ([acf4b67](https://github.com/forbiddenlink/trace/commit/acf4b6729d1a9e9716da8b07068b392539366ca5))
+
 ## 1.0.0 (2026-08-09)
 
 
