@@ -1,22 +1,65 @@
 name: Dependabot auto-merge
-# Auto-merges dependabot patch + minor PRs once CI passes. Major updates stay manual.
+# CI-gated: waits for every other Actions workflow on the PR's head SHA to finish
+# green, then squash-merges patch + minor dependabot PRs. Major updates stay manual.
+#
+# Why the wait exists: these repos have no branch protection, so `gh pr merge --auto`
+# merges immediately instead of waiting for checks. That is how a dependabot lockfile
+# that drops the pnpm `overrides:` block reached main and broke production builds.
+#
+# Uses pull_request_target so GITHUB_TOKEN runs in the base-branch context
+# (dependabot/fetch-metadata needs that to read commit metadata without a 403).
+# Safe: gated on the PR author being dependabot[bot] (not the triggering actor, which a
+# reopen/comment can change); no PR code is checked out or executed.
 on: pull_request_target
+
 permissions:
   contents: write
   pull-requests: write
+  actions: read
+
 jobs:
   automerge:
-    if: ${{ github.actor == 'dependabot[bot]' }}
+    if: ${{ github.event.pull_request.user.login == 'dependabot[bot]' }}
     runs-on: ubuntu-latest
     steps:
-      - name: Fetch dependabot metadata
+      - name: Dependabot metadata
         id: meta
-        uses: dependabot/fetch-metadata@v3
+        uses: dependabot/fetch-metadata@21025c705c08248db411dc16f3619e6b5f9ea21a # v2.5.0
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Enable auto-merge (patch + minor only)
+
+      - name: Wait for CI, then merge (patch + minor only)
         if: ${{ steps.meta.outputs.update-type == 'version-update:semver-patch' || steps.meta.outputs.update-type == 'version-update:semver-minor' }}
-        run: gh pr merge --auto --squash "$PR_URL"
         env:
-          PR_URL: ${{ github.event.pull_request.html_url }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+          REPO: ${{ github.repository }}
+          SELF: ${{ github.workflow }}
+        run: |
+          set -uo pipefail
+          echo "Waiting for workflow runs on $SHA (excluding \"$SELF\") ..."
+          for _ in $(seq 1 90); do
+            runs=$(gh run list --repo "$REPO" --commit "$SHA" --limit 100 \
+                     --json workflowName,status,conclusion \
+                     --jq '.[] | [.workflowName, .status, (.conclusion // "")] | @tsv' 2>/dev/null)
+            other=$(printf '%s\n' "$runs" | grep -v "^${SELF}$(printf '\t')" | sed '/^$/d')
+
+            if [ -z "$other" ]; then
+              sleep 20
+              continue
+            fi
+            if printf '%s\n' "$other" | awk -F'\t' '$2 != "completed" { found = 1 } END { exit !found }'; then
+              sleep 20
+              continue
+            fi
+            if printf '%s\n' "$other" | awk -F'\t' '$3 != "success" && $3 != "skipped" && $3 != "neutral" { found = 1 } END { exit !found }'; then
+              echo "CI not green -> leaving PR open for review:"
+              printf '%s\n' "$other"
+              exit 0
+            fi
+            echo "CI green -> merging"
+            gh pr merge --squash --delete-branch "$PR_URL"
+            exit 0
+          done
+          echo "Timed out waiting for CI (30 min); leaving PR open."
