@@ -17,6 +17,9 @@ updates:
         update-types: ["patch", "minor"]
       major-updates:
         patterns: ["*"]
+        # typescript rides alone: no released typescript-eslint supports TS 7
+        # (8.69.0 peers ">=4.8.4 <6.1.0"), so grouping it blocks every other major.
+        exclude-patterns: ["typescript"]
         update-types: ["major"]
     labels: ["dependencies"]
     commit-message:
