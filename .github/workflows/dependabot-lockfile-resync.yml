@@ -1,0 +1,66 @@
+name: Dependabot lockfile resync
+
+# Dependabot regenerates pnpm-lock.yaml without the `overrides:` block that
+# package.json declares, so `pnpm install --frozen-lockfile` then aborts with
+# ERR_PNPM_LOCKFILE_CONFIG_MISMATCH and the PR can never go green. This puts the
+# block back and pushes the corrected lockfile to the PR branch.
+#
+# pull_request_target is needed to get a token that can push. Safe here: the job
+# only runs for dependabot's own in-repo branches, and `--lockfile-only
+# --ignore-scripts` resolves the manifest without executing any package code.
+
+on: pull_request_target
+
+permissions:
+  contents: write
+
+jobs:
+  resync:
+    if: github.event.pull_request.user.login == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the pull request branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          persist-credentials: true
+          # A PAT makes the pushed commit retrigger CI. With the default
+          # GITHUB_TOKEN the push lands but its workflow runs sit at
+          # action_required until someone approves them.
+          token: ${{ secrets.AUTOMATION_TOKEN || github.token }}
+
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+        with:
+          version: 10
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+
+      - name: Resync the lockfile against package.json
+        id: resync
+        run: |
+          set -uo pipefail
+          before=$(sha256sum pnpm-lock.yaml | cut -d' ' -f1)
+          pnpm install --lockfile-only --ignore-scripts
+          after=$(sha256sum pnpm-lock.yaml | cut -d' ' -f1)
+          if [ "$before" = "$after" ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Verify a frozen install now succeeds
+        if: steps.resync.outputs.changed == 'true'
+        run: pnpm install --frozen-lockfile --lockfile-only
+
+      - name: Push the corrected lockfile
+        if: steps.resync.outputs.changed == 'true'
+        env:
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add pnpm-lock.yaml
+          git commit -m "fix(deps): resync pnpm-lock.yaml with package.json overrides"
+          git push origin "HEAD:$HEAD_REF"
