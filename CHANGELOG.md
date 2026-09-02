@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.3](https://github.com/forbiddenlink/trace/compare/v1.0.2...v1.0.3) (2026-09-02)
+
+
+### Bug Fixes
+
+* **ci:** let pnpm/action-setup read the version from packageManager ([928e17a](https://github.com/forbiddenlink/trace/commit/928e17ac66f7774d26caba0450af52c37e750d04))
+
 ## [1.0.2](https://github.com/forbiddenlink/trace/compare/v1.0.1...v1.0.2) (2026-08-29)
 
 
