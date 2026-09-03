@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.0.4](https://github.com/forbiddenlink/trace/compare/v1.0.3...v1.0.4) (2026-09-03)
+
+
+### Bug Fixes
+
+* **deps:** replace dependency framer-motion with motion ^12.43.0 ([#61](https://github.com/forbiddenlink/trace/issues/61)) ([f29e0e1](https://github.com/forbiddenlink/trace/commit/f29e0e12b8f59aa9f8654771820631a3e52e8817))
+* renovate config drift ([9be5bdc](https://github.com/forbiddenlink/trace/commit/9be5bdc1c7c9366c4ab5440d09891644af52b6ed))
+
 ## [1.0.3](https://github.com/forbiddenlink/trace/compare/v1.0.2...v1.0.3) (2026-09-02)
 
 
