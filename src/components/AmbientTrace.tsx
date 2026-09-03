@@ -6,10 +6,10 @@
  * and replaying. This is "show, don't tell" — the product's signature interaction
  * rendered ambiently so a first-time visitor SEES what tracing means.
  *
- * Pure SVG + framer-motion. The whole thing is decorative (`aria-hidden`); a
+ * Pure SVG + motion. The whole thing is decorative (`aria-hidden`); a
  * static, fully-drawn fallback is shown under prefers-reduced-motion.
  */
-import { motion } from 'framer-motion';
+import { motion } from 'motion/react';
 import { useEffect, useState } from 'react';
 
 /** True when the user asked for reduced motion. */

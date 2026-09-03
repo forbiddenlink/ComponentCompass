@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
-import { motion, useReducedMotion } from 'framer-motion';
+import { motion, useReducedMotion } from 'motion/react';
 import {
   SandpackProvider,
   SandpackLayout,
@@ -718,7 +718,7 @@ function CompareRuler({ orient }: { orient: 'h' | 'v' }) {
 
 /**
  * The compare divider handle: a vermilion hairline with a circular grip that
- * carries a soft vermilion glow and springs on hover / drag (framer-motion).
+ * carries a soft vermilion glow and springs on hover / drag (motion).
  * Spring + glow are gated behind prefers-reduced-motion.
  */
 function CompareHandle() {
