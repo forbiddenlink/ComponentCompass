@@ -10,11 +10,11 @@
  *
  * Endpoints are read once per layout change via getBoundingClientRect (relative to
  * the SVG container), recomputed on a ResizeObserver + a mount rAF — never per frame.
- * The draw-in is animated with framer-motion (pathLength 0→1, staggered), honoring
+ * The draw-in is animated with motion (pathLength 0→1, staggered), honoring
  * prefers-reduced-motion. Hovering/focusing a detection dims the others.
  */
 import { useEffect, useRef, useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion } from 'motion/react';
 
 /** A resolved set of endpoints for one detection's elbow path, in container coords. */
 interface TracePath {
