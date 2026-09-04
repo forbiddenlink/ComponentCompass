@@ -17,7 +17,7 @@ That is Trace. A few months ago it was a dead repo. Here is how I finished it.
 <!-- Upload docs/demo.gif via the DEV editor (drag-drop) and it becomes a CDN URL. -->
 ![Trace in action: a login-form screenshot becomes a live, grounded React component with an accessibility score](docs/demo.gif)
 
-> Live demo: https://trace-liz.vercel.app (try an example, no signup, no API key)
+> Live demo: https://trace-seven-ashen.vercel.app (try an example, no signup, no API key)
 > Code: https://github.com/forbiddenlink/trace
 
 ## What I Built
@@ -45,7 +45,7 @@ Stack: Vite, React 19, TypeScript, Tailwind, Gemini through the Vercel AI SDK, S
 
 ## Demo
 
-> Live: https://trace-liz.vercel.app
+> Live: https://trace-seven-ashen.vercel.app
 
 ![The studio: the source screenshot with numbered detections on the left, the live editable render in the middle, and the "what the AI sees" inspector with grounding confidence on the right](docs/result.png)
 
