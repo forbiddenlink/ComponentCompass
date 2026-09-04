@@ -85,5 +85,5 @@
       "vite": ">=7.3.2"
     }
   },
-  "packageManager": "pnpm@10.32.1"
+  "packageManager": "pnpm@10.34.5"
 }
