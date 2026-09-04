@@ -4,7 +4,7 @@
 
 ![Trace turning a login-form screenshot into a live, grounded React component with an accessibility score](docs/demo.gif)
 
-Live demo: **https://trace-liz.vercel.app**
+Live demo: **https://trace-seven-ashen.vercel.app**
 
 ## What it does
 
